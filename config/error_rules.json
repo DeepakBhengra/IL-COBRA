@@ -1,0 +1,16 @@
+{
+  "code_length": 2,
+  "return_code_fields": ["RETURN-CODE", "WS-RETURN", "RCODE", "SQLCODE"],
+  "error_code_fields": ["ERROR-CODE", "ERR-CODE", "ABEND-CODE"],
+  "error_message_fields": ["ERROR-MSG", "ERR-MSG", "MESSAGE"],
+  "error_patterns": [
+    {
+      "name": "ABEND_OR_STOP",
+      "regex": "\\b(STOP\\s+RUN|GOBACK|ABEND)\\b"
+    },
+    {
+      "name": "SQL_ERROR_BRANCH",
+      "regex": "\\bSQLCODE\\s+NOT\\s*=\\s*ZERO\\b"
+    }
+  ]
+}

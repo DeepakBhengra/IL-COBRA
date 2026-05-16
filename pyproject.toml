@@ -1,0 +1,26 @@
+[project]
+name = "cobol-error-logic-scanner"
+version = "0.1.0"
+description = "AI-assisted pipeline: scan COBOL sources, detect error codes, extract setting logic, summarize, export searchable docs."
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.5.0",
+    "typer[all]>=0.9.0",
+    "rich>=13.7.0",
+    "lark>=1.1.9",
+    "pandas",
+    "streamlit",
+]
+
+[project.scripts]
+cobol-scan = "cobol_error_scanner.cli:main"
+cobol-dashboard = "cobol_error_scanner.dashboard:launch"
+cobol-flowchart = "cobol_error_scanner.flowchart_from_summary:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
