@@ -1,0 +1,132 @@
+{
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident-SE-terms-override.txt": {
+    "mtime_ns": 1780413251923073300,
+    "size": 1446,
+    "document_id": "doc-04326e36eab60cb7"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\runbook-SE-terms-override.docx": {
+    "mtime_ns": 1780072014415958600,
+    "size": 36978,
+    "document_id": "doc-1dadb1615cde9817"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\slack-chat-SE.json": {
+    "mtime_ns": 1780413251836842200,
+    "size": 731,
+    "document_id": "doc-b1acce34892d39c3"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\support-email-SE.eml": {
+    "mtime_ns": 1780413251843880100,
+    "size": 725,
+    "document_id": "doc-19c29b0e370965a5"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\alert1.eml": {
+    "mtime_ns": 1779388754754238700,
+    "size": 364,
+    "document_id": "doc-61139464758806c1"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\alert2.eml": {
+    "mtime_ns": 1779388791276743700,
+    "size": 1754,
+    "document_id": "doc-fa1e5e8e93b54b6e"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\alert3.eml": {
+    "mtime_ns": 1779701301620182600,
+    "size": 301,
+    "document_id": "doc-acf9208d01b633f7"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\chat_export copy.json": {
+    "mtime_ns": 1779736390210844300,
+    "size": 166,
+    "document_id": "doc-91de5d975908e9d7"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\chat_export.json": {
+    "mtime_ns": 1780056776721751000,
+    "size": 201,
+    "document_id": "doc-b98a7c3842dbc24c"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\error_codes.csv": {
+    "mtime_ns": 1780056776721751000,
+    "size": 120,
+    "document_id": "doc-33036669eb062812"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident-D6-line1-comment.txt": {
+    "mtime_ns": 1780413251866569000,
+    "size": 903,
+    "document_id": "doc-58ad3952ebe24ea2"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident-D6-no-agreement.txt": {
+    "mtime_ns": 1780413251835842100,
+    "size": 1225,
+    "document_id": "doc-39782a7e769c6081"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident_1.html": {
+    "mtime_ns": 1779698698992867900,
+    "size": 229,
+    "document_id": "doc-e49d94b6be0948ee"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident_2 .html": {
+    "mtime_ns": 1779701218902375000,
+    "size": 234,
+    "document_id": "doc-d97914077bc156ec"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident_3.html": {
+    "mtime_ns": 1780051938114479800,
+    "size": 192,
+    "document_id": "doc-38ae25d193ef6b82"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident_ew.html": {
+    "mtime_ns": 1780056776722831100,
+    "size": 237,
+    "document_id": "doc-80cb123b3209f75b"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident_report.txt": {
+    "mtime_ns": 1780056776721751000,
+    "size": 148,
+    "document_id": "doc-19899adc14039bf0"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\production.log": {
+    "mtime_ns": 1780056776717295500,
+    "size": 0,
+    "document_id": "doc-4dee1add62d69487"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\RE INC5823340 - Order Submit Failed  ERR-NO-SEC-TERM-OVRD Order .htm": {
+    "mtime_ns": 1779420876605184200,
+    "size": 132865,
+    "document_id": "doc-2ca13519e9a06a5b"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\runbook_timeout.md": {
+    "mtime_ns": 1780056776721216400,
+    "size": 287,
+    "document_id": "doc-e97836adb5f210fd"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\slack-chat-D6.json": {
+    "mtime_ns": 1780413251863480000,
+    "size": 719,
+    "document_id": "doc-a7b6c95692c539a8"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\support-email-D6.eml": {
+    "mtime_ns": 1780413251866569000,
+    "size": 545,
+    "document_id": "doc-d6fe2d20865fc32e"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\support_ticket.json": {
+    "mtime_ns": 1780056776722831100,
+    "size": 156,
+    "document_id": "doc-cf2ac7257fcfcc35"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\incident_21.html": {
+    "mtime_ns": 1780417429048562900,
+    "size": 248,
+    "document_id": "doc-472fcfdbc0332456"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\runbook_timeout copy.md": {
+    "mtime_ns": 1780417579776381100,
+    "size": 120,
+    "document_id": "doc-5abc318c45ddfd01"
+  },
+  "C:\\Legacy-Error-Code-Mapper-ver1\\samples\\docs\\support_ticket copy.json": {
+    "mtime_ns": 1780417537843932400,
+    "size": 156,
+    "document_id": "doc-197c7554dd25e3c5"
+  }
+}

@@ -3,22 +3,36 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from cobol_error_scanner.llm_client import (
+    DEFAULT_OLLAMA_BASE_URL,
+    DEFAULT_OLLAMA_MODEL,
+    DEFAULT_OPENAI_MODEL,
+    LLM_BACKEND_PROVIDERS,
+    chat_completion,
+)
 from cobol_error_scanner.models import ErrorOccurrence, ProgramSummary
 
 
 @dataclass
 class SummarizerConfig:
-    provider: str = "heuristic"  # heuristic | openai
-    model: str = "gpt-4o-mini"
+    provider: str = "heuristic"  # heuristic | openai | ollama
+    model: str = DEFAULT_OPENAI_MODEL
     api_key_env: str = "OPENAI_API_KEY"
+    base_url: str = field(default_factory=lambda: os.environ.get("OLLAMA_BASE_URL", DEFAULT_OLLAMA_BASE_URL))
+
+    def __post_init__(self) -> None:
+        if self.provider == "ollama":
+            if self.model == DEFAULT_OPENAI_MODEL:
+                self.model = os.environ.get("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL)
+            self.base_url = os.environ.get("OLLAMA_BASE_URL", self.base_url)
 
 
 def summarize_row(occ: ErrorOccurrence) -> str:
     """
     Short business-facing summary for table output.
-    With ``openai`` you can replace/extend this; heuristics use message + condition.
+    With ``openai`` or ``ollama`` you can replace/extend this; heuristics use message + condition.
     """
     msg_raw = occ.error_message_literal.strip()
     msg_u = msg_raw.upper()
@@ -40,8 +54,16 @@ def summarize_row(occ: ErrorOccurrence) -> str:
 
 def summarize_program(summary: ProgramSummary, cfg: SummarizerConfig | None = None) -> str:
     cfg = cfg or SummarizerConfig()
-    if cfg.provider == "openai" and os.environ.get(cfg.api_key_env):
-        return _summarize_openai(summary, cfg)
+    if cfg.provider in LLM_BACKEND_PROVIDERS:
+        llm_text = _summarize_llm(summary, cfg)
+        if llm_text:
+            return llm_text
+        fallback_note = (
+            " (openai package not installed; fallback used)"
+            if cfg.provider == "openai"
+            else " (ollama unavailable; fallback used)"
+        )
+        return _summarize_heuristic(summary) + fallback_note
     return _summarize_heuristic(summary)
 
 
@@ -69,13 +91,7 @@ def _summarize_heuristic(p: ProgramSummary) -> str:
     return " ".join(parts)
 
 
-def _summarize_openai(p: ProgramSummary, cfg: SummarizerConfig) -> str:
-    try:
-        from openai import OpenAI
-    except ImportError:
-        return _summarize_heuristic(p) + " (openai package not installed; fallback used)"
-
-    client = OpenAI()
+def _summarize_llm(p: ProgramSummary, cfg: SummarizerConfig) -> str | None:
     bullets = []
     for occ in p.occurrences:
         bullets.append(
@@ -86,7 +102,8 @@ def _summarize_openai(p: ProgramSummary, cfg: SummarizerConfig) -> str:
         "Use short paragraphs, mention likely business checks, and avoid repeating raw COBOL.\n\n"
         + "\n".join(bullets[:80])
     )
-    r = client.chat.completions.create(
+    return chat_completion(
+        provider=cfg.provider,
         model=cfg.model,
         messages=[
             {
@@ -95,6 +112,7 @@ def _summarize_openai(p: ProgramSummary, cfg: SummarizerConfig) -> str:
             },
             {"role": "user", "content": user},
         ],
+        api_key_env=cfg.api_key_env,
+        base_url=cfg.base_url,
         temperature=0.2,
     )
-    return (r.choices[0].message.content or "").strip()

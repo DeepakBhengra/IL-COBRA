@@ -1,0 +1,22 @@
+{
+  "ingest": {
+    "max_file_mb": 25,
+    "max_documents": 500
+  },
+  "knowledge": {
+    "dir": "knowledge/",
+    "incremental": true,
+    "merge_on_write": true,
+    "index_by_code_field": true,
+    "skip_full_doc_scan_when_accepted": true,
+    "skip_doc_scan_when_accepted": true,
+    "max_indexed_excerpt_chars": 2000,
+    "max_aggregated_steps": 20
+  },
+  "resolver": {
+    "provider": "heuristic",
+    "model": "gpt-4o-mini",
+    "api_key_env": "OPENAI_API_KEY",
+    "top_k": 3
+  }
+}

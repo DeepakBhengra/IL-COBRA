@@ -1,0 +1,8 @@
+From: ops@example.com
+To: support@example.com
+Subject: INC634343: X4A : Order not created  Error Message:  ERROR-SHIP-COMPLETE 
+Date: Wed, 24 May 2026 10:00:00 +0000
+Content-Type: text/plain; charset="utf-8"
+
+order create throwing EC  error
+Need to check the back order flag sent in the request

@@ -10,11 +10,35 @@ dependencies = [
     "lark>=1.1.9",
     "pandas",
     "streamlit",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+]
+
+[project.optional-dependencies]
+ingest = [
+    "pypdf>=4.0.0",
+    "python-docx>=1.1.0",
+    "openpyxl>=3.1.0",
+]
+openai = [
+    "openai>=1.0.0",
+]
+html = [
+    "beautifulsoup4>=4.12.0",
+]
+documents = [
+    "pypdf>=4.0.0",
+    "python-docx>=1.1.0",
+    "openpyxl>=3.1.0",
+    "beautifulsoup4>=4.12.0",
+    "openai>=1.0.0",
 ]
 
 [project.scripts]
 cobol-scan = "cobol_error_scanner.cli:main"
+cobol-ingest = "cobol_error_scanner.ingestion.cli:main"
 cobol-dashboard = "cobol_error_scanner.dashboard:launch"
+cobol-dashboard-api = "cobol_error_scanner.api.server:main"
 cobol-flowchart = "cobol_error_scanner.flowchart_from_summary:main"
 
 [build-system]

@@ -1,0 +1,32 @@
+From: ops@example.com
+To: support@example.com
+Subject: INC6777563: X4A : Order not created Quote No: QUO-2293955-V1Q8Z3 Vendor RedHat IN-C-T-25111004313817397172  Error Message:  LINE1-NOT-CMNT SDB1234B490
+Date: Wed, 21 May 2026 10:00:00 +0000
+Content-Type: text/plain; charset="utf-8"
+
+Hi Gajanand,
+ 
+Good day.
+ 
+My response in the below email chain was for a test-region issue, which Rajesh was facing while trying to replicate the order in IMOR(test-region). It did not mention in any capacity that this would fix the problem in Production.
+For the error which is being encountered (Production), the process followed should be as below:
+ 
+1.	Identify the system causing the error, in this case it would be Insideline/Impulse.
+2.	Share the required logs and transfer the Incident to Insideline queue to be picked up and worked on by the respective on-call person.
+ 
+It looks like the Incident was closed in the X4C bucket by stating the below reason, please note IMOR is a test-region:
+ 
+ 
+Next steps:
+Please have an Incident created and transferred to the Insideline queue for proper tracking, analysis and resolution.
+ 
+
+The error ‘LINE1-NOT-CMNT’ is usually encountered if you try to create a Direct-order which does not have the first-line on the order as a comment-line (existing functionality)
+ 
+Usual resolutions:
+1.	Either Pass the first line as a comment-line for Direct-orders, this will bypass the error.  To be handled at X4C
+2.	Or Setup the Country and Term-id combination in TBXINLN to bypass this error  No need to pass the first line as comment-line.  To be handled in Impulse by raising required ticket and assigning to regional admin teams.
+ 
+Similar cases in email attached.
+ 
+Thank you.

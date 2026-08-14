@@ -1,0 +1,34 @@
+INCIDENT REPORT — ORP676 EU Agreement Missing (D6)
+==================================================
+Incident ID:   INC-2025-0518-D6-AGR
+Opened:        2025-05-18 09:14 UTC
+Program:       ORP676
+Severity:      P2 — order blocked on EU agreement validation
+
+SUMMARY
+-------
+Order maintenance failed when CORORA-EU-AGREEMENT was not on file for the ship-to.
+ORP676 set CORORA-R-ERROR-NO-AGREEMENT and returned two-character error code D6.
+Processing exited after the WHEN 'C' / WHEN 'A' agreement path in paragraph 100-EXIT.
+
+SYMPTOMS
+--------
+- Operator message: "No EU agreement on file for customer"
+- WS-ERROR-SW set to 'Y' in ORP676
+- Error code: D6 (CORORA two-char mapping VALUE 'D6')
+- 88-level field: CORORA-R-ERROR-NO-AGREEMENT
+
+TIMELINE
+--------
+09:10  CSR updates agreement type on order 7721044
+09:12  ORP676 evaluates CORORA-EU-AGREEMENT flags
+09:14  D6 raised; CORORA-R-ERROR-NO-AGREEMENT set TRUE
+
+RESOLUTION
+----------
+Loaded missing EU agreement record in master file TB-EU-AGR. Retest passed; no D6.
+
+RELATED
+-------
+- COBOL: samples/ORP676.cob (EU agreement WHEN path)
+- Mapping: error_mapping_files/CORORA_TWO_CHAR_ERROR.txt VALUE 'D6' -> CORORA-R-ERROR-NO-AGREEMENT

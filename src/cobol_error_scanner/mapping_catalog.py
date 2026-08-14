@@ -180,10 +180,51 @@ def default_corora_mapping_paths(mapping_dir: Path) -> tuple[Path, Path]:
 
 MAX_ERROR_FIELD_INPUT_LEN = 30
 
+RESERVED_ERROR_FIELD_QUERIES = frozenset(
+    {"ERR", "ERROR", "ERROR-", "-ERROR", "-ERROR-"}
+)
+
+_RESERVED_KEYWORDS_DISPLAY = "ERR, ERROR, ERROR-, -ERROR, -ERROR-"
+
 
 def normalize_user_error_field_input(raw: str) -> str:
     """Strip, uppercase, cap length (for search needles)."""
     return raw.strip().upper()[:MAX_ERROR_FIELD_INPUT_LEN]
+
+
+def _error_field_core_fragment(normalized: str) -> str:
+    """Strip CORORA-R- / CORORL-R- prefix before reserved check."""
+    for prefix in ("CORORA-R-", "CORORL-R-"):
+        if normalized.startswith(prefix):
+            return normalized[len(prefix) :]
+    return normalized
+
+
+def error_field_query_violation(raw: str) -> str | None:
+    """Return a user-facing reason if *raw* is a reserved generic keyword, else None."""
+    normalized = normalize_user_error_field_input(raw)
+    if not normalized:
+        return None
+    core = _error_field_core_fragment(normalized)
+    if normalized in RESERVED_ERROR_FIELD_QUERIES or core in RESERVED_ERROR_FIELD_QUERIES:
+        token = core if core in RESERVED_ERROR_FIELD_QUERIES else normalized
+        return (
+            f"Error field query rejected: {token!r} is too generic for a scan or filter. "
+            f"Use a specific 88-level name fragment (e.g. ERR-NO-SEC-EDD-OVRD), "
+            f"not a reserved keyword: {_RESERVED_KEYWORDS_DISPLAY}."
+        )
+    return None
+
+
+def validate_error_field_query(raw: str) -> str:
+    """Normalize; raise ValueError with a specific message if reserved."""
+    normalized = normalize_user_error_field_input(raw)
+    if not normalized:
+        return normalized
+    reason = error_field_query_violation(raw)
+    if reason:
+        raise ValueError(reason)
+    return normalized
 
 
 def canonical_r_field_name(user_fragment: str, *, family: str) -> str:

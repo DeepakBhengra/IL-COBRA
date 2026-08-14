@@ -1,0 +1,23 @@
+[
+  {
+    "channel": "#orp676-eu-support",
+    "user": "alee",
+    "timestamp": "2025-05-18T09:15:00Z",
+    "text": "Getting error code D6 on ORP676 — EU agreement missing?"
+  },
+  {
+    "user": "bnguyen",
+    "timestamp": "2025-05-18T09:17:00Z",
+    "text": "That's CORORA-R-ERROR-NO-AGREEMENT. Mapping shows VALUE 'D6' in CORORA_TWO_CHAR_ERROR."
+  },
+  {
+    "user": "alee",
+    "timestamp": "2025-05-18T09:20:00Z",
+    "text": "Also saw D6 on ORP673 for CORORL-R-ERROR-LINE1-NOT-CMNT — different program, same code."
+  },
+  {
+    "user": "bnguyen",
+    "timestamp": "2025-05-18T09:45:00Z",
+    "text": "Fixed TB-EU-AGR for ORP676 case — retest clean, no more D6 on order 7721044."
+  }
+]

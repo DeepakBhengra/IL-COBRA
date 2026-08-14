@@ -1,0 +1,6 @@
+{
+  "key": "ERROR-DIFF-EU-VENDOR",
+  "summary": "Insideline Error",
+  "status": "open",
+  "description": "order is not created , throwing D1 error"
+}

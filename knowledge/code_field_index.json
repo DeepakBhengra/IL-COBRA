@@ -1,0 +1,184 @@
+{
+  "D1": {
+    "error_fields": [
+      "CORORA-R-NON-NUM-ENDUSER-ID",
+      "CORORL-R-ERROR-DIFF-EU-VENDOR"
+    ],
+    "field_aliases": [
+      "CORORA-R-NON-NUM-ENDUSER-ID",
+      "CORORL-R-ERROR-DIFF-EU-VENDOR",
+      "ERR-DIFF-EU-VENDOR",
+      "ERROR-DIFF-EU-VENDOR",
+      "NON-NUM-ENDUSER-ID"
+    ],
+    "document_ids": [
+      "doc-197c7554dd25e3c5",
+      "doc-5abc318c45ddfd01"
+    ],
+    "resolution_keys": [
+      "doc-197c7554dd25e3c5|document",
+      "doc-5abc318c45ddfd01|document"
+    ],
+    "document_summaries": [
+      {
+        "document_id": "doc-5abc318c45ddfd01",
+        "title": "runbook_timeout copy",
+        "excerpt": "# Runbook: order processing\nError code - D1\nAcheck if the vendors of order lines are linked with one master vendor.",
+        "term_matched": true,
+        "match_reasons": [
+          "error code D1"
+        ]
+      },
+      {
+        "document_id": "doc-197c7554dd25e3c5",
+        "title": "Insideline Error",
+        "excerpt": "Insideline Error\n\norder is not created , throwing D1 error",
+        "term_matched": true,
+        "match_reasons": [
+          "error code D1"
+        ]
+      }
+    ],
+    "aggregated_resolution": {
+      "summary": "Address D1 in ORP673 based on linked COBOL logic.",
+      "steps": [
+        "Review COBOL program ORP673 for error code D1.",
+        "Validate business condition: TB-CPO4-ALLOW-DIR-SHIP-GRP, TC-EUROPE, TC-USA, TC-CANADA, TC-BRAZIL, TC-MEXICO, TC-BRAZIL-LINK, ORH-COMPANY, LINK-IN, INI-VENDOR-NBR, ORH-DIR-ORD-VEND-NBR.",
+        "Expected behavior: Nested control path (inner to outer): IF TB-CPO4-ALLOW-DIR-SHIP-GRP AND (TC-EUROPE OR TC-USA OR TC-CANADA OR TC-BRAZIL OR TC-MEXICO OR TC-BRAZIL-LINK OR (ORH-COMPANY = 'TH' OR ORH-C... -> IF INI-VENDO.",
+        "Compare with similar document: Insideline Error (ticket).",
+        "Compare with similar document: runbook_timeout copy (runbook)."
+      ],
+      "resolution_count": 2
+    },
+    "accepted_evidence": {},
+    "user_fix": {},
+    "user_fixes": {},
+    "confirmed_resolution": {
+      "selected_text": "INI-VENDOR-NBR",
+      "comment": "all vendor should be linked to a master vendor (VLNK)",
+      "source": "condition",
+      "error_code": "D1",
+      "reviewed_at": "2026-06-05T11:30:16.998150+00:00",
+      "reviewed_by": "enterprise-ui"
+    }
+  },
+  "D6": {
+    "error_fields": [],
+    "field_aliases": [],
+    "document_ids": [],
+    "resolution_keys": [
+      "doc-33036669eb062812|document",
+      "doc-39782a7e769c6081|document",
+      "doc-58ad3952ebe24ea2|document",
+      "doc-61139464758806c1|document",
+      "doc-80cb123b3209f75b|document",
+      "doc-a7b6c95692c539a8|document",
+      "doc-b98a7c3842dbc24c|document",
+      "doc-cf2ac7257fcfcc35|document",
+      "doc-d6fe2d20865fc32e|document",
+      "doc-e97836adb5f210fd|document"
+    ],
+    "document_summaries": [],
+    "aggregated_resolution": {
+      "summary": "Address D6 in ORP673 based on linked COBOL logic.",
+      "steps": [
+        "From knowledge index (D6): Address D6 in ORP673 based on linked COBOL logic.",
+        "Review COBOL program ORP673 for error code D6.",
+        "Validate business condition: WS-FROM-SUBSTATION, WS-TERM-ID-FROM-IMTELLITRACK, ORH-BID, ORH-TERM-ID, XVFC, CORORL-OPER-ID, RNEW, VENP, TB-IL-LINE1-NOT-COMNT-ALLOW, NEXT, SENTENCE, ORH-LAST-LINE-NBR, WS-VNSHED-NORESP, VNH-DS-TYPE-.",
+        "Check mapping detail: Matched in CORORA and CORORL for code D6: CORORA=CORORA-R-ERROR-NO-AGREEMENT; CORORL=CORORL-R-ERROR-LINE1-NOT-CMNT.",
+        "Expected behavior: Nested control path (inner to outer): IF WS-FROM-SUBSTATION AND (WS-TERM-ID-FROM-IMTELLITRACK OR ORH-BID OR (ORH-TERM-ID = 'XVFC' AND (CORORL-OPER-ID = 'RNEW' OR 'VENP')) OR TB-IL-L... -> IF ORH-LAST-.",
+        "Compare with similar document: ORP676 error D6 \u2014 CORORA-R-ERROR-NO-AGREEMENT (order 7721044) (email).",
+        "Compare with similar document: runbook_timeout (runbook).",
+        "Compare with similar document: Insideline Error (ticket).",
+        "Compare with similar document: slack-chat-D6 (chat).",
+        "Compare with similar document: error_codes (csv).",
+        "Compare with similar document: incident-D6-line1-comment (incident).",
+        "Compare with similar document: D6 line comment incident (incident).",
+        "Compare with similar document: incident-D6-no-agreement (incident).",
+        "Compare with similar document: chat_export (chat).",
+        "Compare with similar document: INC6777563: X4A : Order not created Quote No: QUO-2293955-V1Q8Z3 Vendor RedHat IN-C-T-25111004313817397172  Error Message:  LINE1-NOT-CMNT SDB1234B490 (email)."
+      ],
+      "resolution_count": 10
+    },
+    "accepted_evidence": {},
+    "user_fix": {},
+    "user_fixes": {},
+    "confirmed_resolution": {
+      "selected_text": "chat_export oncall: error code D6 in order create response dev: please note that for direct orders it is required",
+      "comment": "please note that for direct orders it is required to pass the first line as a comment line - dEEPAK",
+      "source": "historical",
+      "error_code": "D6",
+      "reviewed_at": "2026-06-05T07:43:05.626386+00:00",
+      "reviewed_by": "enterprise-ui"
+    }
+  },
+  "EC": {
+    "error_fields": [],
+    "field_aliases": [],
+    "document_ids": [],
+    "resolution_keys": [
+      "doc-acf9208d01b633f7|document",
+      "doc-d97914077bc156ec|document"
+    ],
+    "document_summaries": [],
+    "aggregated_resolution": {
+      "summary": "Address EC in ORP676 based on linked COBOL logic.",
+      "steps": [
+        "From knowledge index (EC): Address EC in ORP676 based on linked COBOL logic.",
+        "Review COBOL program ORP676 for error code EC.",
+        "Validate business condition: ORH-FROM-XML, NEXT, SENTENCE, ORSH-SHIP-COMPLETE-NOT-FILLED, CORORA-ACTION-RELEASE, CORORA-RELEASE-VERIFICATION, ORSH-DIST-SHIP-COMPLETE, CORORA-BCK-BACKORDER-FLAG.",
+        "Expected behavior: Nested control path (inner to outer): IF ORH-FROM-XML NEXT SENTENCE -> IF ORSH-SHIP-COMPLETE-NOT-FILLED AND ( CORORA-ACTION-RELEASE OR CORORA-RELEASE-VERIFICATION ) AND ( ORSH-DIST-SHIP-COMPLETE OR CO.",
+        "Compare with similar document: order created is throwing 'EC' error code (incident).",
+        "Compare with similar document: INC634343: X4A : Order not created  Error Message:  ERROR-SHIP-COMPLETE  (email)."
+      ],
+      "resolution_count": 2
+    },
+    "accepted_evidence": {},
+    "user_fix": {},
+    "user_fixes": {},
+    "confirmed_resolution": {
+      "selected_text": "order create throwing EC error Need to check the back order flag sent in the request",
+      "comment": "check the back order flag in the request - Deepak",
+      "source": "historical",
+      "error_code": "EC",
+      "reviewed_at": "2026-06-09T12:08:51.783570+00:00",
+      "reviewed_by": "enterprise-ui"
+    }
+  },
+  "SE": {
+    "error_fields": [],
+    "field_aliases": [],
+    "document_ids": [],
+    "resolution_keys": [
+      "doc-04326e36eab60cb7|document",
+      "doc-19c29b0e370965a5|document",
+      "doc-1dadb1615cde9817|document",
+      "doc-2ca13519e9a06a5b|document",
+      "doc-38ae25d193ef6b82|document",
+      "doc-b1acce34892d39c3|document",
+      "doc-e49d94b6be0948ee|document"
+    ],
+    "document_summaries": [],
+    "aggregated_resolution": {
+      "summary": "Address SE in ORP676 based on linked COBOL logic.",
+      "steps": [
+        "Review COBOL program ORP676 for error code SE.",
+        "Validate business condition: TB-SEC-NORESP, CORORA-TERMS, CORORA-OPER-ID, TB-IL-ALLOW-TERMS-SEC-CHK, WS-DEFAULT-TERMS, TB-TERMS-NORESP, TB-IL-ALLOW-TERMS-SW, CORORA-CALL-FROM-IM-REP, TC-USA, ITS-AN-EUROPE-WEB-ORDER, TB-IL-END-ORD.",
+        "Check mapping detail: CORORA two-char mapping for SE: CORORA-R-ERR-NO-SEC-TERM-OVRD.",
+        "Expected behavior: Nested control path (inner to outer): IF NOT TB-SEC-NORESP -> IF (CORORA-TERMS EQUAL 992) -> IF CORORA-OPER-ID GREATER THAN SPACES -> IF TB-IL-ALLOW-TERMS-SEC-CHK -> IF CORORA-TERMS GREATER THAN WS-DE.",
+        "Compare with similar document: runbook-SE-terms-override (runbook).",
+        "Compare with similar document: ORP676 error SE \u2014 terms override denied (order 8842190) (email).",
+        "Compare with similar document: slack-chat-SE (chat).",
+        "Compare with similar document: incident-SE-terms-override (incident).",
+        "Compare with similar document: RE INC5823340 - Order Submit Failed  ERR-NO-SEC-TERM-OVRD Order  (html).",
+        "Compare with similar document: SE error (incident).",
+        "Compare with similar document: SE error code (incident)."
+      ],
+      "resolution_count": 7
+    },
+    "accepted_evidence": {},
+    "user_fix": {},
+    "user_fixes": {},
+    "confirmed_resolution": {}
+  }
+}

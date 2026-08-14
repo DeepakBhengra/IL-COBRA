@@ -1,0 +1,16 @@
+{"sessionId": "980007", "hypothesisId": "A", "location": "debug_confirm_api.py", "message": "health_ok", "data": {"status": 200}, "timestamp": 1780420172929}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "entry", "data": {"index": 0, "source": "historical"}, "timestamp": 1780420172934}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "saved", "data": {"error_code": "D1"}, "timestamp": 1780420172941}
+{"sessionId": "980007", "hypothesisId": "A", "location": "debug_confirm_api.py", "message": "post_ok", "data": {"status": 200, "elapsed_s": 0.01, "error_code": "D1"}, "timestamp": 1780420172942}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "entry", "data": {"index": 0, "source": "historical"}, "timestamp": 1780420403345}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "saved", "data": {"error_code": "D1"}, "timestamp": 1780420403371}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "entry", "data": {"index": 0, "source": "historical"}, "timestamp": 1780645125636}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "saved", "data": {"error_code": "EC"}, "timestamp": 1780645125654}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "entry", "data": {"index": 0, "source": "historical"}, "timestamp": 1780645385614}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "saved", "data": {"error_code": "D6"}, "timestamp": 1780645385632}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "entry", "data": {"index": 0, "source": "historical"}, "timestamp": 1780646038971}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "saved", "data": {"error_code": "EC"}, "timestamp": 1780646038987}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "entry", "data": {"index": 0, "source": "condition"}, "timestamp": 1780659016940}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "saved", "data": {"error_code": "D1"}, "timestamp": 1780659017042}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "entry", "data": {"index": 0, "source": "historical"}, "timestamp": 1781006931773}
+{"sessionId": "980007", "hypothesisId": "D", "location": "server.py:post_confirmed_resolution", "message": "saved", "data": {"error_code": "EC"}, "timestamp": 1781006931788}

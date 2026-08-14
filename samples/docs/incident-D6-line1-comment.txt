@@ -1,0 +1,27 @@
+INCIDENT REPORT — ORP673 Line 1 Comment Required (D6)
+=====================================================
+Incident ID:   INC-2025-0518-D6-L1
+Opened:        2025-05-18 11:02 UTC
+Program:       ORP673
+Severity:      P3 — substation order line rejected
+
+SUMMARY
+-------
+Substation order entry failed because line 1 lacked a required comment when
+WS-FROM-SUBSTATION was active. ORP673 set CORORL-R-ERROR-LINE1-NOT-CMNT and
+returned CORORL error code D6 per CORORL_TWO_CHAR_ERROR mapping.
+
+SYMPTOMS
+--------
+- Error code D6 on green screen for ORP673
+- Field: CORORL-R-ERROR-LINE1-NOT-CMNT (alias LINE1-NOT-CMNT)
+- Condition path: WS-FROM-SUBSTATION AND WS-TERM-ID-FROM
+
+RESOLUTION
+----------
+CSR added mandatory line-1 comment text and resubmitted; D6 cleared.
+
+RELATED
+-------
+- COBOL: samples/ORP673.cob
+- Mapping: error_mapping_files/CORORL_TWO_CHAR_ERROR.txt VALUE 'D6'

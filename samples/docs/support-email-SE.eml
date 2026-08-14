@@ -1,0 +1,23 @@
+From: jmartinez@example.com
+To: app-support@example.com
+Subject: ORP676 error SE — terms override denied (order 8842190)
+Date: Sat, 12 Apr 2025 14:24:00 +0000
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Hi App Support,
+
+A tier-1 CSR hit error code SE while changing payment terms on order 8842190 in ORP676.
+
+Details:
+- Program: ORP676
+- CORORA field: CORORA-R-ERR-NO-SEC-TERM-OVRD (ERR-NO-SEC-TERM-OVRD)
+- Security: TB-SEC-TRANSACTION='TERM', TB-SEC-FIELD-NBR='05'
+- Two-char code from mapping: 'SE'
+
+The order flow sets WS-ERROR-SW and exits after S0011-GENERIC-SECURITY denies the override.
+
+Please confirm whether SEC-TERM-05 is required for this operator profile.
+
+Thanks,
+Jordan

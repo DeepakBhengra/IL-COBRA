@@ -1,0 +1,37 @@
+INCIDENT REPORT — ORP676 Terms Security Override Failure
+=========================================================
+Incident ID:   INC-2025-0412-SE
+Opened:        2025-04-12 14:22 UTC
+Program:       ORP676
+Severity:      P2 — order entry blocked for CSR tier-1
+
+SUMMARY
+-------
+Customer service attempted to override payment terms on order 8842190. ORP676
+returned CORORA error code SE after generic security check S0011-GENERIC-SECURITY
+for transaction TERM (field 05). The 88-level condition CORORA-R-ERR-NO-SEC-TERM-OVRD
+was set to TRUE and processing exited at paragraph 100-EXIT.
+
+SYMPTOMS
+--------
+- Operator sees "Security: terms override not authorized" on green screen
+- WS-ERROR-SW set to 'Y' in ORP676
+- Error code: SE (two-character CORORA return)
+- Field alias visible in support notes: ERR-NO-SEC-TERM-OVRD
+
+TIMELINE
+--------
+14:18  CSR opens order 8842190, changes terms from NET30 to NET60
+14:20  ORP676 performs TB-SEC-SYSTEM='CS', TB-SEC-TRANSACTION='TERM'
+14:22  Security denies override; CORORA-R-ERR-NO-SEC-TERM-OVRD raised (code SE)
+14:35  Escalated to app support; verified operator lacks SEC-TERM-05 grant
+
+RESOLUTION
+----------
+Granted operator profile SEC-TERM-05 in security admin. Retest succeeded;
+no SE on repeat transaction.
+
+RELATED
+-------
+- COBOL: samples/ORP676.cob (S0011-GENERIC-SECURITY / TERM path)
+- Mapping: error_mapping_files/CORORA_TWO_CHAR_ERROR.txt VALUE 'SE'

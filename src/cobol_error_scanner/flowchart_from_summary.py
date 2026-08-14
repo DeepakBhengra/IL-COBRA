@@ -159,6 +159,9 @@ def build_mermaid(
     Layers from nested summaries are drawn **outer → inner** (reverse of
     inner-to-outer storage). A simple ``condition`` fallback yields one
     decision diamond.
+
+    For **IF** nodes, **False** continues toward the error path and **True**
+    branches to "No error on this branch". **WHEN** nodes use Match / No match.
     """
     lines: list[str] = ["flowchart TD"]
     used_ids: dict[str, int] = {}
@@ -198,14 +201,15 @@ def build_mermaid(
                 f'    {prev_id} -->|"{_mermaid_safe_inner_text(when_else_label, max_len=40)}"| {alt_id}'
             )
         else:
+            # False continues toward the error path; True exits with no error.
             lines.append(
-                f'    {prev_id} -->|"{_mermaid_safe_inner_text(true_label, max_len=40)}"| {node_id}'
+                f'    {prev_id} -->|"{_mermaid_safe_inner_text(false_label, max_len=40)}"| {node_id}'
             )
             skip_id = _next_node_id("Skip", used_ids)
             skip_txt = _mermaid_safe_inner_text("No error on this branch", max_len=80)
             lines.append(f'    {skip_id}(["{skip_txt}"])')
             lines.append(
-                f'    {prev_id} -->|"{_mermaid_safe_inner_text(false_label, max_len=40)}"| {skip_id}'
+                f'    {prev_id} -->|"{_mermaid_safe_inner_text(true_label, max_len=40)}"| {skip_id}'
             )
 
         prev_id = node_id
@@ -213,7 +217,12 @@ def build_mermaid(
     end_id = _next_node_id("Set", used_ids)
     act = parsed.action or parsed.raw_summary or "Set error / continue path"
     lines.append(f'    {end_id}["{_mermaid_safe_inner_text(act)}"]')
-    lines.append(f"    {prev_id} --> {end_id}")
+    last_step = steps[-1]
+    if last_step.kind == "WHEN":
+        outcome_edge = _mermaid_safe_inner_text(when_match_label, max_len=40)
+    else:
+        outcome_edge = _mermaid_safe_inner_text(false_label, max_len=40)
+    lines.append(f'    {prev_id} -->|"{outcome_edge}"| {end_id}')
 
     return "\n".join(lines) + "\n"
 
@@ -265,14 +274,19 @@ def build_dot(
         else:
             skip_id = _next_node_id("Skip", used_ids)
             lines.append(f'  {skip_id} [shape=box, label="{_sanitize_label("No error on this branch")}"];')
-            lines.append(f'  {prev_id} -> {nid} [label="{_sanitize_label(true_label)}"];')
-            lines.append(f'  {prev_id} -> {skip_id} [label="{_sanitize_label(false_label)}"];')
+            lines.append(f'  {prev_id} -> {nid} [label="{_sanitize_label(false_label)}"];')
+            lines.append(f'  {prev_id} -> {skip_id} [label="{_sanitize_label(true_label)}"];')
         prev_id = nid
 
     end_id = _next_node_id("Set", used_ids)
     act = parsed.action or parsed.raw_summary or "Set error"
     lines.append(f'  {end_id} [shape=box, label="{_sanitize_label(act)}"];')
-    lines.append(f"  {prev_id} -> {end_id};")
+    last_step = steps[-1]
+    if last_step.kind == "WHEN":
+        outcome_edge = _sanitize_label(when_match_label)
+    else:
+        outcome_edge = _sanitize_label(false_label)
+    lines.append(f'  {prev_id} -> {end_id} [label="{outcome_edge}"];')
     lines.append("}")
     return "\n".join(lines) + "\n"
 

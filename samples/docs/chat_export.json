@@ -1,0 +1,4 @@
+[
+  {"user": "oncall", "text": "error code D6 in order create response "},
+  {"user": "dev", "text": "please note that for direct orders it is required to pass the first line as a comment line"}
+]

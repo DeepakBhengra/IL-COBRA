@@ -24,6 +24,7 @@ from cobol_error_scanner.mapping_resolve import (
 )
 from cobol_error_scanner.docgen import build_manifest, write_jsonl, write_manifest_json, write_markdown_table
 from cobol_error_scanner.pipeline import filter_programs_by_error_code, scan_root
+from cobol_error_scanner.llm_client import LLM_PROVIDERS
 from cobol_error_scanner.summarizer import SummarizerConfig
 
 console = Console()
@@ -50,7 +51,7 @@ def scan(
         "heuristic",
         "--summarizer",
         "-s",
-        help="heuristic | openai (needs OPENAI_API_KEY + pip install openai)",
+        help="heuristic | openai | ollama (openai needs OPENAI_API_KEY; ollama needs local server)",
     ),
     error_code: str | None = typer.Option(
         None,
@@ -90,7 +91,7 @@ def scan(
     ),
 ) -> None:
     """Scan COBOL sources and emit searchable documentation."""
-    cfg = SummarizerConfig(provider=summarizer if summarizer in {"heuristic", "openai"} else "heuristic")
+    cfg = SummarizerConfig(provider=summarizer if summarizer in LLM_PROVIDERS else "heuristic")
 
     ef_raw = (error_field or "").strip()
     if len(ef_raw) > MAX_ERROR_FIELD_INPUT_LEN:
@@ -104,12 +105,16 @@ def scan(
     if ef:
         if error_code and (error_code or "").strip():
             console.print("[yellow]Note:[/yellow] --error-field takes precedence; ignoring --error-code.")
-        programs = resolve_mapped_error_field(
-            source_root,
-            ef,
-            mapping_dir_explicit=corora_mappings,
-            summarizer=cfg,
-        )
+        try:
+            programs = resolve_mapped_error_field(
+                source_root,
+                ef,
+                mapping_dir_explicit=corora_mappings,
+                summarizer=cfg,
+            )
+        except ValueError as exc:
+            console.print(f"[red]Error:[/red] {exc}")
+            raise typer.Exit(1) from exc
         resolved_table = (
             table_name.strip()
             if (table_name is not None and table_name.strip() != "")

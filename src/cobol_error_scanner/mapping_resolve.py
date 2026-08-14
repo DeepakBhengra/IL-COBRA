@@ -20,6 +20,7 @@ from cobol_error_scanner.mapping_catalog import (
     load_two_char_value_to_names,
     normalize_user_error_field_input,
     resolve_mapping_directory,
+    validate_error_field_query,
 )
 from cobol_error_scanner.logic_extractor import enrich_corora_occurrence_control_flow
 from cobol_error_scanner.models import ErrorOccurrence, ProgramSummary, SourceLocation
@@ -686,7 +687,7 @@ def resolve_mapped_error_field(
     then run the same COBOL resolution as :func:`resolve_mapped_error_code` for
     each derived two-character code.
     """
-    q = normalize_user_error_field_input(error_field_query)
+    q = validate_error_field_query(error_field_query)
     if len(q) < 2:
         return []
 

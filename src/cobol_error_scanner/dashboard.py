@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import re
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -12,139 +12,35 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from cobol_error_scanner.mapping_catalog import (
-    MAX_ERROR_FIELD_INPUT_LEN,
-    resolve_mapping_directory,
+from cobol_error_scanner.data_access import (
+    DETAIL_FIELDS,
+    TABLE_COLUMNS,
+    filter_frame,
+    format_value,
+    load_manifest,
+    load_records,
+    parse_error_code_tokens,
+    records_to_frame,
 )
-from cobol_error_scanner.mapping_resolve import apply_mapping_filter_fallback, resolve_mapped_error_field
-from cobol_error_scanner.docgen import build_manifest, write_jsonl, write_manifest_json, write_markdown_table
 from cobol_error_scanner.flowchart_from_summary import build_mermaid, parse_jsonl_row
-from cobol_error_scanner.pipeline import filter_programs_by_error_code, scan_root
-from cobol_error_scanner.summarizer import SummarizerConfig
+from cobol_error_scanner.mapping_catalog import MAX_ERROR_FIELD_INPUT_LEN, error_field_query_violation
+from cobol_error_scanner.paths import (
+    DASHBOARD_PORT,
+    DEFAULT_CORORA_MAPPINGS,
+    DEFAULT_OUT_DIR,
+    DEFAULT_RULES_PATH,
+    DEFAULT_SOURCE_ROOT,
+    detect_repo_root,
+)
+from cobol_error_scanner.scan_service import optional_path, run_scan
+from cobol_error_scanner.table_export import build_csv_bytes, build_display_table
 
-
-DEFAULT_SOURCE_ROOT = Path("samples")
-DEFAULT_RULES_PATH = Path("config/error_rules.json")
-DEFAULT_OUT_DIR = Path("out")
-DEFAULT_CORORA_MAPPINGS = Path("error_mapping_files")
-
-TABLE_COLUMNS = [
-    "error_code",
-    "error_field",
-    "program",
-    "line",
-    "paragraph",
-    "section",
-    "condition",
-    "parameters",
-    "error_message",
-    "row_summary",
-    "mapping_detail",
-]
-
-DETAIL_FIELDS = [
-    ("Program", "program"),
-    ("Error code", "error_code"),
-    ("Error Field", "error_field"),
-    ("File", "file"),
-    ("Line", "line"),
-    ("Paragraph", "paragraph"),
-    ("Section", "section"),
-    ("Condition", "condition"),
-    ("Parameters", "parameters"),
-    ("Error message", "error_message"),
-    ("Statement", "statement"),
-    ("Summary", "row_summary"),
-    ("Mapping detail", "mapping_detail"),
-]
-
-_MOVE_TO_TARGET = re.compile(r"\bMOVE\s+.+?\s+TO\s+([\w-]+)", re.IGNORECASE)
-_SET_TO_TARGET = re.compile(r"\bSET\s+([\w-]+)\s+TO\s+\S+", re.IGNORECASE)
-
-
-def _format_value(value: Any) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, float) and pd.isna(value):
-        return ""
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False)
-    return str(value)
-
-
-def _extract_error_field(statement: str) -> str:
-    """Return the COBOL field or condition name that receives the error mapping."""
-    text = statement.strip()
-    if not text:
-        return ""
-    for pattern in (_MOVE_TO_TARGET, _SET_TO_TARGET):
-        match = pattern.search(text)
-        if match:
-            return match.group(1)
-    return ""
-
-
-@st.cache_data(show_spinner=False)
-def load_records(jsonl_path: str) -> list[dict[str, Any]]:
-    path = Path(jsonl_path)
-    if not path.exists():
-        return []
-
-    records: list[dict[str, Any]] = []
-    with path.open("r", encoding="utf-8") as handle:
-        for line in handle:
-            line = line.strip()
-            if line:
-                records.append(json.loads(line))
-    return records
-
-
-@st.cache_data(show_spinner=False)
-def load_manifest(manifest_path: str) -> dict[str, Any]:
-    path = Path(manifest_path)
-    if not path.exists():
-        return {}
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def records_to_frame(records: list[dict[str, Any]]) -> pd.DataFrame:
-    frame = pd.DataFrame(records)
-    for column in set(
-        TABLE_COLUMNS + ["file", "statement", "logic_context", "related", "summary", "search_text", "mapping_detail"]
-    ):
-        if column not in frame.columns:
-            frame[column] = ""
-    frame["error_field"] = frame.apply(
-        lambda row: row["error_field"] or _extract_error_field(str(row.get("statement", ""))),
-        axis=1,
-    )
-    if "line" in frame.columns:
-        def _normalize_line_cell(v: Any) -> Any:
-            if v == "" or v is None:
-                return ""
-            if isinstance(v, float) and pd.isna(v):
-                return ""
-            try:
-                return int(float(v))
-            except (ValueError, TypeError):
-                return v
-
-        frame["line"] = frame["line"].map(_normalize_line_cell)
-    return frame
-
-
-def _optional_path(raw: str) -> Path | None:
-    raw = raw.strip()
-    return Path(raw) if raw else None
+ENTERPRISE_UI_URL = os.environ.get("ENTERPRISE_UI_URL", "http://localhost:8000")
 
 
 def apply_filters(frame: pd.DataFrame) -> pd.DataFrame:
-    filtered = frame.copy()
-
-    programs = sorted(value for value in filtered["program"].dropna().astype(str).unique() if value)
+    programs = sorted(value for value in frame["program"].dropna().astype(str).unique() if value)
     selected_programs = st.sidebar.multiselect("Programs", programs)
-    if selected_programs:
-        filtered = filtered[filtered["program"].isin(selected_programs)]
 
     error_code_input = st.sidebar.text_input(
         "Error codes",
@@ -152,96 +48,34 @@ def apply_filters(frame: pd.DataFrame) -> pd.DataFrame:
         help="Type one or more 2-character error codes separated by commas or spaces. Case-insensitive.",
         max_chars=64,
     )
-    raw_tokens = [token.strip() for token in error_code_input.replace(",", " ").split() if token.strip()]
-    invalid_tokens = [token for token in raw_tokens if len(token) != 2]
+    typed_codes, invalid_tokens = parse_error_code_tokens(error_code_input)
     if invalid_tokens:
         st.sidebar.error(
             "Error codes must be exactly 2 characters. Invalid: "
             + ", ".join(f"'{token}'" for token in invalid_tokens)
         )
-    else:
-        typed_codes = [token.upper() for token in raw_tokens]
-        if typed_codes:
-            filtered = filtered[filtered["error_code"].astype(str).str.upper().isin(typed_codes)]
 
     query = st.sidebar.text_input("Search", placeholder="condition, parameter, message, paragraph...")
-    if query.strip():
-        haystack = (
-            filtered["search_text"].fillna("").astype(str)
-            + " "
-            + filtered["error_field"].fillna("").astype(str)
-        ).str.lower()
-        filtered = filtered[haystack.str.contains(query.strip().lower(), regex=False)]
-
     field_contains = st.sidebar.text_input(
         "Error field contains",
         placeholder="substring of CORORA-R-… / CORORL-R-… name",
         help="Filter loaded rows where the Error Field column contains this text (case-insensitive). Max 30 characters.",
         max_chars=MAX_ERROR_FIELD_INPUT_LEN,
     )
+    field_contains_effective = field_contains
     if field_contains.strip():
-        fc = field_contains.strip().lower()
-        col = filtered["error_field"].fillna("").astype(str).str.lower()
-        filtered = filtered[col.str.contains(fc, regex=False)]
+        field_violation = error_field_query_violation(field_contains)
+        if field_violation:
+            st.sidebar.error(field_violation)
+            field_contains_effective = ""
 
-    return filtered
-
-
-def run_scan(
-    source_root: Path,
-    rules_path: Path,
-    out_dir: Path,
-    summarizer: str,
-    *,
-    error_code: str = "",
-    error_field: str = "",
-    corora_mappings: Path | None = None,
-) -> tuple[int, int, str]:
-    ef = error_field.strip()[:MAX_ERROR_FIELD_INPUT_LEN]
-    if ef:
-        config = SummarizerConfig(provider=summarizer if summarizer in {"heuristic", "openai"} else "heuristic")
-        programs = resolve_mapped_error_field(
-            source_root,
-            ef,
-            mapping_dir_explicit=corora_mappings,
-            summarizer=config,
-        )
-        table_name = "error_field_table.md"
-        manifest = build_manifest(source_root, programs)
-        write_jsonl(manifest, out_dir / "errors.jsonl")
-        write_manifest_json(manifest, out_dir / "manifest.json")
-        write_markdown_table(manifest, out_dir / table_name)
-        finding_count = sum(len(program.occurrences) for program in programs)
-        return len(programs), finding_count, table_name
-
-    requested_code = error_code.strip().upper()
-    if requested_code and len(requested_code) != 2:
-        raise ValueError(f"Focused error-code scans require exactly 2 characters: {requested_code!r}")
-
-    config = SummarizerConfig(provider=summarizer if summarizer in {"heuristic", "openai"} else "heuristic")
-    programs = scan_root(source_root, rules_path, summarizer=config)
-    table_name = "errors_table.md"
-
-    if requested_code:
-        standard_matches = filter_programs_by_error_code(programs, requested_code, summarizer=config)
-        mapping_dir = resolve_mapping_directory(source_root, corora_mappings)
-        corora_matches = []
-        if mapping_dir is not None:
-            corora_matches = apply_mapping_filter_fallback(
-                source_root,
-                requested_code,
-                mapping_dir=corora_mappings,
-                summarizer=config,
-            )
-        programs = corora_matches if corora_matches else standard_matches
-        table_name = "error_table.md"
-
-    manifest = build_manifest(source_root, programs)
-    write_jsonl(manifest, out_dir / "errors.jsonl")
-    write_manifest_json(manifest, out_dir / "manifest.json")
-    write_markdown_table(manifest, out_dir / table_name)
-    finding_count = sum(len(program.occurrences) for program in programs)
-    return len(programs), finding_count, table_name
+    return filter_frame(
+        frame,
+        programs=selected_programs or None,
+        error_codes=typed_codes or None,
+        query=query,
+        field_contains=field_contains_effective,
+    )
 
 
 def render_scan_controls() -> tuple[Path, Path, Path]:
@@ -269,8 +103,11 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
     error_field = error_field_raw.strip()[:MAX_ERROR_FIELD_INPUT_LEN]
     focused_error: str | None = None
     if error_field:
-        focused_error = None
-        if error_code:
+        field_violation = error_field_query_violation(error_field)
+        if field_violation:
+            focused_error = field_violation
+            st.sidebar.error(focused_error)
+        elif error_code:
             st.sidebar.caption("Using **Focused Error Field**; focused error code is ignored for this run.")
     elif error_code and len(error_code) != 2:
         focused_error = (
@@ -279,7 +116,7 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
         )
         st.sidebar.error(focused_error)
 
-    corora_mappings = _optional_path(
+    corora_mappings = optional_path(
         st.sidebar.text_input(
             "Mapping folder",
             str(DEFAULT_CORORA_MAPPINGS),
@@ -289,7 +126,7 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
             ),
         )
     )
-    summarizer = st.sidebar.selectbox("Summarizer", ["heuristic", "openai"])
+    summarizer = st.sidebar.selectbox("Summarizer", ["heuristic", "openai", "ollama"])
 
     if st.sidebar.button("Run scan", type="primary", disabled=focused_error is not None):
         if focused_error is not None:
@@ -297,6 +134,8 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
         else:
             try:
                 st.session_state["scan_results_ready"] = False
+                st.session_state["scan_records"] = []
+                st.session_state["scan_manifest"] = {}
                 with st.spinner("Scanning COBOL sources..."):
                     program_count, finding_count, table_name = run_scan(
                         source_root,
@@ -308,12 +147,18 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
                         corora_mappings=corora_mappings,
                     )
                 st.cache_data.clear()
+                records_path = out_dir / "errors.jsonl"
+                manifest_path = out_dir / "manifest.json"
+                st.session_state["scan_records"] = load_records(records_path)
+                st.session_state["scan_manifest"] = load_manifest(manifest_path)
                 st.session_state["scan_results_ready"] = True
                 st.sidebar.success(
                     f"Scanned {program_count} program(s), found {finding_count} finding(s). Wrote {table_name}."
                 )
             except Exception as exc:
                 st.session_state["scan_results_ready"] = False
+                st.session_state["scan_records"] = []
+                st.session_state["scan_manifest"] = {}
                 st.sidebar.error(f"Scan failed: {exc}")
 
     return source_root, rules_path, out_dir
@@ -328,27 +173,15 @@ def render_metrics(frame: pd.DataFrame) -> None:
 
 
 def render_table(filtered: pd.DataFrame) -> None:
-    table = filtered[TABLE_COLUMNS].copy()
-    for column in table.columns:
-        if table[column].dtype == object:
-            table[column] = table[column].map(_format_value)
-    table = table.rename(columns={"error_field": "Error Field"})
-    table.insert(0, "S.No", range(1, len(table) + 1))
-
+    table = build_display_table(filtered)
     table_html = table.to_html(index=False, escape=True, classes="mf-findings-table")
     st.markdown(
         f'<div class="mf-table-wrap">{table_html}</div>',
         unsafe_allow_html=True,
     )
-
-    csv_table = filtered[TABLE_COLUMNS + ["file", "statement", "logic_context"]].rename(
-        columns={"error_field": "Error Field"}
-    )
-    csv_table.insert(0, "S.No", range(1, len(csv_table) + 1))
-    csv_data = csv_table.to_csv(index=False).encode("utf-8")
     st.download_button(
         "Download filtered CSV",
-        csv_data,
+        build_csv_bytes(filtered),
         file_name="cobol_error_findings.csv",
         mime="text/csv",
     )
@@ -370,7 +203,6 @@ def _mermaid_embed_html(chart: str, graph_id: str) -> str:
     font-family: "IBM Plex Mono", Consolas, monospace;
     overflow: hidden;
   }}
-  /* Non-scrolling frame: HUD is positioned here so it stays bottom-right while #viewport scrolls. */
   #chartShell {{
     position: relative;
     width: 100%;
@@ -495,7 +327,6 @@ zin.addEventListener("click", () => {{ scale += STEP; applyScale(); }});
 zout.addEventListener("click", () => {{ scale -= STEP; applyScale(); }});
 zreset.addEventListener("click", () => {{ scale = 1; applyScale(); }});
 
-/* Wheel zoom anywhere over the chart shell (diagram or HUD) without scrolling the parent page. */
 chartShell.addEventListener("wheel", (e) => {{
   if (!e.ctrlKey) return;
   e.preventDefault();
@@ -541,17 +372,15 @@ try {{
 
 
 def _flowchart_row_label(filtered: pd.DataFrame, position: int) -> str:
-    """Label for selectbox: S.No + code + program + line (matches findings table order)."""
     row = filtered.iloc[position]
     sn = position + 1
-    code = _format_value(row.get("error_code", ""))
-    prog = _format_value(row.get("program", ""))
-    ln = _format_value(row.get("line", ""))
+    code = format_value(row.get("error_code", ""))
+    prog = format_value(row.get("program", ""))
+    ln = format_value(row.get("line", ""))
     return f"Finding {sn}: {code} | {prog} | line {ln}"
 
 
 def render_finding_flowchart_section(filtered: pd.DataFrame) -> None:
-    """Control-flow diagram for any filtered finding (same order as the table / S.No)."""
     if filtered.empty:
         return
     st.subheader("Control flow chart")
@@ -607,7 +436,7 @@ def render_finding_details(filtered: pd.DataFrame, manifest: dict[str, Any]) -> 
     row = filtered.loc[selected]
 
     for label, key in DETAIL_FIELDS:
-        value = _format_value(row.get(key, ""))
+        value = format_value(row.get(key, ""))
         if value:
             st.markdown(f"**{label}:** {value}")
 
@@ -620,16 +449,6 @@ def render_finding_details(filtered: pd.DataFrame, manifest: dict[str, Any]) -> 
     if program_summary:
         st.markdown("**Program summary:**")
         st.write(program_summary)
-
-    related = row.get("related")
-    if isinstance(related, list) and related:
-        st.markdown("**Related variables:**")
-        st.json(related)
-
-    logic_context = _format_value(row.get("logic_context", ""))
-    if logic_context:
-        st.markdown("**Logic context:**")
-        st.code(logic_context, language="cobol")
 
 
 _MAINFRAME_CSS = """
@@ -921,6 +740,20 @@ html, body, .stApp, [data-testid="stAppViewContainer"],
     color: var(--mf-amber-hi) !important;
     font-family: var(--mf-mono) !important;
 }
+
+.mf-ui-switch {
+    text-align: right;
+    margin-bottom: 0.5rem;
+}
+.mf-ui-switch a {
+    color: #1A88FF !important;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.mf-ui-switch a:hover {
+    text-decoration: underline;
+    color: #66B3FF !important;
+}
 </style>
 """
 
@@ -934,7 +767,7 @@ _HOW_TO_USE_MD = """
 - **Output folder** — where `errors.jsonl`, `manifest.json`, and the markdown table are written.
 - **Focused Error Field** *(optional)* — up to **30 characters**. Substring match against **CORORA** and **CORORL** one- and two-char mapping files (e.g. `ERR-NO-SEC-EDD-OVRD` matches `CORORA-R-ERR-…` and `CORORL-R-ERR-…`). Resolves derived two-character codes the same way as focused error-code search, then writes **`error_field_table.md`**. Overrides focused error code when both are filled.
 - **Mapping folder** *(optional)* — folder containing `CORORA_*` and `CORORL_*` mapping fragments. Leave blank to auto-detect.
-- **Summarizer** — `heuristic` (default) or `openai` (needs `OPENAI_API_KEY`).
+- **Summarizer** — `heuristic` (default), `openai` (needs `OPENAI_API_KEY`), or `ollama` (local server at `localhost:11434`).
 - Click **Run scan** to generate or refresh results.
 
 **2. Filter findings (sidebar → *Filters*)**
@@ -946,17 +779,25 @@ _HOW_TO_USE_MD = """
 - **Metrics** at the top show total findings, distinct programs, distinct codes, and source files.
 - **Findings table** — first column `S.No`, then `Error Code`, `Error Field` (the COBOL field/condition the code maps to), program, line, paragraph/section, condition, parameters, message, and a row summary.
 - **Download filtered CSV** to export the current view.
-- **Finding Details** — pick any row to see its full statement, related variables, program-level summary, and the surrounding COBOL logic context.
+- **Finding Details** — pick any row to see its full statement, program-level summary, and control flow chart.
 """
 
 
 def main() -> None:
     st.set_page_config(page_title="Insideline Error Code Dashboard", layout="wide")
     st.markdown(_MAINFRAME_CSS, unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="mf-ui-switch"><a href="{ENTERPRISE_UI_URL}" target="_blank">Switch to Enterprise UI ↗</a></div>',
+        unsafe_allow_html=True,
+    )
     st.title("Insideline Error Code Dashboard")
     st.caption("Explore detected COBOL error codes, conditions, parameters, and generated summaries.")
     if "scan_results_ready" not in st.session_state:
         st.session_state["scan_results_ready"] = False
+    if "scan_records" not in st.session_state:
+        st.session_state["scan_records"] = []
+    if "scan_manifest" not in st.session_state:
+        st.session_state["scan_manifest"] = {}
 
     with st.expander("How to use this dashboard", expanded=False):
         st.markdown(_HOW_TO_USE_MD)
@@ -966,8 +807,8 @@ def main() -> None:
     manifest_path = out_dir / "manifest.json"
 
     if st.session_state["scan_results_ready"]:
-        manifest = load_manifest(str(manifest_path))
-        records = load_records(str(records_path))
+        manifest = st.session_state.get("scan_manifest") or {}
+        records = st.session_state.get("scan_records") or []
     else:
         manifest = {}
         records = []
@@ -1000,9 +841,18 @@ def main() -> None:
 
 def launch() -> None:
     """Console-script entry point that launches this module with Streamlit."""
+    import os as _os
+
     from streamlit.web import cli as streamlit_cli
 
-    sys.argv = ["streamlit", "run", str(Path(__file__).resolve())]
+    _os.chdir(detect_repo_root())
+    sys.argv = [
+        "streamlit",
+        "run",
+        str(Path(__file__).resolve()),
+        "--server.port",
+        str(DASHBOARD_PORT),
+    ]
     raise SystemExit(streamlit_cli.main())
 
 

@@ -1,0 +1,20 @@
+From: alee@example.com
+To: appsupport@example.com
+Subject: ORP676 error D6 — CORORA-R-ERROR-NO-AGREEMENT (order 7721044)
+Date: Sun, 18 May 2025 09:16:00 +0000
+Content-Type: text/plain; charset=utf-8
+
+Hi App Support,
+
+CSR hit error code D6 on ORP676 while updating EU agreement on order 7721044.
+
+Details:
+- Program: ORP676
+- CORORA field: CORORA-R-ERROR-NO-AGREEMENT
+- Two-char code from mapping: D6
+- Symptom: CORORA-EU-AGREEMENT not on file
+
+Please verify master agreement table TB-EU-AGR for this ship-to.
+
+Thanks,
+Alex

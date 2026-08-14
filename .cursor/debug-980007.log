@@ -1,0 +1,48 @@
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780420362241}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780420362315}
+{"sessionId":"980007","hypothesisId":"B","location":"ConfirmResolutionModal.tsx:confirmClick","message":"Confirm button clicked","data":{"commentLen":58,"saving":false},"timestamp":1780420403329}
+{"sessionId":"980007","hypothesisId":"B","location":"OperationalDocsPanel.tsx:handleConfirm:entry","message":"handleConfirm called","data":{"hasPending":true,"index":0,"outDir":"C:\\Legacy-Error-Code-Mapper-ver1\\out","source":"historical"},"timestamp":1780420403331}
+{"sessionId":"980007","hypothesisId":"A","location":"OperationalDocsPanel.tsx:handleConfirm:postOk","message":"postConfirmedResolution succeeded","data":{},"timestamp":1780420403377}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:handleConfirm:refreshOk","message":"refreshDocs after confirm completed","data":{},"timestamp":1780420403475}
+{"sessionId":"980007","hypothesisId":"A","location":"ConfirmResolutionModal.tsx:confirmSuccess","message":"onConfirm resolved","data":{},"timestamp":1780420403476}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780420435367}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780420435437}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780471946257}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780471946461}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780839593632}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780839593808}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780839714812}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780839714961}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780839916388}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780839916458}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780839999413}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780839999468}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780840091806}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780840091856}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780840117056}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780840117100}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780840175012}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780840175061}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":1},"timestamp":1780927277341}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780927277509}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780927383170}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780927383253}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780993903902}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780993904056}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780993927613}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780993927687}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1780994371113}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1780994371295}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1781006767506}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1781006767689}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1781006838196}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1781006838272}
+{"sessionId":"980007","hypothesisId":"B","location":"OperationalDocsPanel.tsx:handleConfirm:entry","message":"handleConfirm called","data":{"hasPending":true,"index":0,"outDir":"C:\\Legacy-Error-Code-Mapper-ver1\\out","source":"historical"},"timestamp":1781006931750}
+{"sessionId":"980007","hypothesisId":"B","location":"ConfirmResolutionModal.tsx:confirmClick","message":"Confirm button clicked","data":{"commentLen":49,"saving":false},"timestamp":1781006931748}
+{"sessionId":"980007","hypothesisId":"A","location":"OperationalDocsPanel.tsx:handleConfirm:postOk","message":"postConfirmedResolution succeeded","data":{},"timestamp":1781006931793}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:handleConfirm:refreshOk","message":"refreshDocs after confirm completed","data":{},"timestamp":1781006931891}
+{"sessionId":"980007","hypothesisId":"A","location":"ConfirmResolutionModal.tsx:confirmSuccess","message":"onConfirm resolved","data":{},"timestamp":1781006931891}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1781007598319}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1781007598759}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:entry","message":"loadDocs started","data":{"index":0},"timestamp":1781260805872}
+{"sessionId":"980007","hypothesisId":"C","location":"OperationalDocsPanel.tsx:loadDocs:success","message":"loadDocs completed","data":{},"timestamp":1781260806071}

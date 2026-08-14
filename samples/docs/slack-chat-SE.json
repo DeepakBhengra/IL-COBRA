@@ -1,0 +1,23 @@
+[
+  {
+    "channel": "#orp676-support",
+    "user": "jmartinez",
+    "timestamp": "2025-04-12T14:23:00Z",
+    "text": "Seeing error code SE on ORP676 when CSR tries terms override — anyone else?"
+  },
+  {
+    "user": "kpatel",
+    "timestamp": "2025-04-12T14:25:00Z",
+    "text": "That's CORORA-R-ERR-NO-SEC-TERM-OVRD. Security check TERM field 05 failed in S0011-GENERIC-SECURITY."
+  },
+  {
+    "user": "jmartinez",
+    "timestamp": "2025-04-12T14:26:00Z",
+    "text": "Alias in the log says ERR-NO-SEC-TERM-OVRD. Operator ID lacks SEC-TERM-05."
+  },
+  {
+    "user": "kpatel",
+    "timestamp": "2025-04-12T14:40:00Z",
+    "text": "Granted SEC-TERM-05 — retest clean, no more SE on order 8842190."
+  }
+]
