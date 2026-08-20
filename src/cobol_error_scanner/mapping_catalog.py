@@ -26,6 +26,25 @@ _VALUE_LINE = re.compile(
 
 
 @dataclass(frozen=True)
+class MappingDefinition:
+    """A single ``88 <name> VALUE '<val>'`` mapping entry located in a copybook."""
+
+    name: str
+    value: str
+    family: str
+    kind: str  # two_char_<family> / one_char_<family>
+    path: Path
+    line_no: int
+    commented: bool
+    raw_line: str
+
+
+def is_fixed_format_comment(line: str) -> bool:
+    """True if *line* is a fixed-format COBOL comment (``*`` or ``/`` in column 7)."""
+    return len(line) > 6 and line[6] in "*/"
+
+
+@dataclass(frozen=True)
 class MappingFileSet:
     """Resolved paths for CORORA / CORORL / CORORH two-char and one-char fragments."""
 
@@ -328,34 +347,69 @@ def find_mapping_rows_matching_field(
     ``two_char_<family>`` or ``one_char_<family>`` with ``<family>`` lowercased
     (e.g. ``two_char_corora``, ``one_char_cororh``).
     """
+    return [
+        (d.name, d.value, d.kind)
+        for d in find_mapping_definitions_matching_field(
+            paths, user_query, min_needle_len=min_needle_len
+        )
+    ]
+
+
+def find_mapping_definitions_matching_field(
+    paths: MappingFileSet,
+    user_query: str,
+    *,
+    min_needle_len: int = 2,
+) -> list[MappingDefinition]:
+    """
+    Like :func:`find_mapping_rows_matching_field`, but returns richer
+    :class:`MappingDefinition` records (family, copybook path, line number, and
+    whether the entry is commented out) for each matching 88-level line.
+    """
     needles = field_search_needles(user_query)
     needles = [n for n in needles if len(n) >= min_needle_len]
     if not needles:
         return []
 
-    out: list[tuple[str, str, str]] = []
+    out: list[MappingDefinition] = []
     seen: set[tuple[str, str, str]] = set()
 
-    def _scan(path: Path, kind: str) -> None:
+    def _scan(path: Path, kind: str, family: str) -> None:
         if not path.is_file():
             return
-        text = path.read_text(encoding="utf-8", errors="replace")
-        for m in _VALUE_LINE.finditer(text):
+        for idx, raw in enumerate(
+            path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1
+        ):
+            m = _VALUE_LINE.search(raw)
+            if not m:
+                continue
             name = m.group(1).upper()
             val = m.group(2).upper()
             if not any(n in name for n in needles):
                 continue
             key = (name, val, kind)
-            if key not in seen:
-                seen.add(key)
-                out.append(key)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(
+                MappingDefinition(
+                    name=name,
+                    value=val,
+                    family=family,
+                    kind=kind,
+                    path=path,
+                    line_no=idx,
+                    commented=is_fixed_format_comment(raw),
+                    raw_line=raw.rstrip(),
+                )
+            )
 
     two_paths = paths.two_char_paths()
     one_paths = paths.one_char_paths()
     for fam in MAPPING_FAMILIES:
         fam_key = fam.lower()
-        _scan(two_paths[fam], f"two_char_{fam_key}")
-        _scan(one_paths[fam], f"one_char_{fam_key}")
+        _scan(two_paths[fam], f"two_char_{fam_key}", fam)
+        _scan(one_paths[fam], f"one_char_{fam_key}", fam)
     return out
 
 
