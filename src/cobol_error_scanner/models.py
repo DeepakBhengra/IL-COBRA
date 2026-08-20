@@ -37,11 +37,11 @@ class ErrorOccurrence(BaseModel):
     parameters_text: str = ""
     error_message_literal: str = ""
     row_summary: str = ""
-    #: Logical CORORA / CORORL condition / field (e.g. mapped 88 name), not necessarily the
-    #: receiving item in ``setting_statement`` (used when fallback is MOVE to type).
+    #: Logical CORORA / CORORL / CORORH condition / field (e.g. mapped 88 name), not necessarily
+    #: the receiving item in ``setting_statement`` (used when fallback is MOVE to type).
     error_field: str = ""
-    #: When a code or field query matched both CORORA and CORORL mapping files, or both
-    #: one-char maps contributed, a short human-readable note for the findings table.
+    #: When a code or field query matched more than one mapping family (CORORA / CORORL /
+    #: CORORH), or multiple one-char maps contributed, a short human-readable note for the table.
     mapping_detail: str = ""
 
 

@@ -8,13 +8,15 @@ from pathlib import Path
 
 from cobol_error_scanner.ingestion.document_search import _mentions_code
 from cobol_error_scanner.ingestion.models import ExtractedEntity
-from cobol_error_scanner.mapping_catalog import MAX_ERROR_FIELD_INPUT_LEN
+from cobol_error_scanner.mapping_catalog import MAPPING_FAMILIES, MAX_ERROR_FIELD_INPUT_LEN
 
 _PROGRAM_RE = re.compile(r"\b([A-Z]{2,3}\d{3,6})\b")
 _QUOTED_CODE_RE = re.compile(r"['\"]([A-Z0-9]{2,8})['\"]")
 _TWO_CHAR_CODE_RE = re.compile(r"\berror\s*(?:code)?\s*[:=]?\s*([A-Z0-9]{2})\b", re.IGNORECASE)
 _CORORA_RE = re.compile(
-    r"\b(CORORA-R-[A-Z0-9-]{1,30}|CORORL-R-[A-Z0-9-]{1,30}|ERR-[A-Z0-9-]{1,30})\b",
+    r"\b("
+    + "|".join(rf"{fam}-R-[A-Z0-9-]{{1,30}}" for fam in MAPPING_FAMILIES)
+    + r"|ERR-[A-Z0-9-]{1,30})\b",
     re.IGNORECASE,
 )
 _TWO_CHAR_BOUNDARY = re.compile(r"(?<![A-Z0-9])([A-Z0-9]{2})(?![A-Z0-9])", re.IGNORECASE)

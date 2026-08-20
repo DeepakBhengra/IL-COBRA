@@ -1,7 +1,8 @@
 """Load error code ↔ condition-name mappings from copybook-style text files.
 
-Supports **CORORA** and **CORORL** families (``CORORA-R-*``, ``CORORL-R-*``) and
-parallel mapping filenames under ``error_mapping_files/``.
+Supports the **CORORA**, **CORORL**, and **CORORH** families (``CORORA-R-*``,
+``CORORL-R-*``, ``CORORH-R-*``) and parallel mapping filenames under
+``error_mapping_files/``.
 """
 
 from __future__ import annotations
@@ -10,24 +11,46 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+MAPPING_FAMILIES = ("CORORA", "CORORL", "CORORH")
+
+#: Regex alternation of the supported mapping families (e.g. ``CORORA|CORORL|CORORH``).
+_FAMILY_ALT = "|".join(MAPPING_FAMILIES)
+
 # 88  CORORA-R-ERROR-DOM-TO-INTL-BI   VALUE 'X5'.
 # 88 CORORL-R-BAD-RESP-ORP619        VALUE 'C0'.
+# 88 CORORH-R-ERROR-SHIP-VIA         VALUE 'V'.
 _VALUE_LINE = re.compile(
-    r"\b((?:CORORA|CORORL)-R-[\w-]+)\s+VALUE\s+['\"]([^'\"]+)['\"]",
+    rf"\b((?:{_FAMILY_ALT})-R-[\w-]+)\s+VALUE\s+['\"]([^'\"]+)['\"]",
     re.IGNORECASE,
 )
-
-MAPPING_FAMILIES = ("CORORA", "CORORL")
 
 
 @dataclass(frozen=True)
 class MappingFileSet:
-    """Resolved paths for CORORA / CORORL two-char and one-char fragments."""
+    """Resolved paths for CORORA / CORORL / CORORH two-char and one-char fragments."""
 
     corora_two: Path
     corora_one: Path
     cororl_two: Path
     cororl_one: Path
+    cororh_two: Path
+    cororh_one: Path
+
+    def two_char_paths(self) -> dict[str, Path]:
+        """Map each family to its two-char fragment path (files may be missing)."""
+        return {
+            "CORORA": self.corora_two,
+            "CORORL": self.cororl_two,
+            "CORORH": self.cororh_two,
+        }
+
+    def one_char_paths(self) -> dict[str, Path]:
+        """Map each family to its one-char fragment path (files may be missing)."""
+        return {
+            "CORORA": self.corora_one,
+            "CORORL": self.cororl_one,
+            "CORORH": self.cororh_one,
+        }
 
 
 def load_two_char_value_to_names(path: Path) -> dict[str, list[str]]:
@@ -55,7 +78,7 @@ def load_one_char_error_type_map(path: Path, *, family: str) -> dict[str, str]:
     Map single-character ``VALUE`` to the **first** ``<FAMILY>-R-ERROR-*`` name
     in file order (same first-wins rule as legacy CORORA-only behavior).
 
-    ``family`` must be ``CORORA`` or ``CORORL`` (case-insensitive).
+    ``family`` must be one of :data:`MAPPING_FAMILIES` (case-insensitive).
     """
     fam = family.strip().upper()
     if fam not in MAPPING_FAMILIES:
@@ -94,7 +117,7 @@ def load_one_char_error_flags(path: Path) -> dict[str, str]:
 
 
 _INV_TRANSIT_MODE = re.compile(
-    r"\b((?:CORORA|CORORL)-R-INV-TRANSIT-MODE)\s+VALUE\s+['\"]([^'\"]+)['\"]",
+    rf"\b((?:{_FAMILY_ALT})-R-INV-TRANSIT-MODE)\s+VALUE\s+['\"]([^'\"]+)['\"]",
     re.IGNORECASE,
 )
 
@@ -132,7 +155,7 @@ def resolve_mapping_directory(
     source_root: Path,
     explicit: Path | None,
 ) -> Path | None:
-    """Pick a directory containing CORORA_* and/or CORORL_* mapping files."""
+    """Pick a directory containing CORORA_* / CORORL_* / CORORH_* mapping files."""
     if explicit is not None:
         p = explicit.resolve()
         return p if p.is_dir() else None
@@ -166,10 +189,18 @@ def _pick_two_one(base: Path, stem: str) -> tuple[Path, Path]:
 
 
 def default_mapping_paths(mapping_dir: Path) -> MappingFileSet:
-    """CORORA and CORORL two-char / one-char paths (file may be missing)."""
+    """CORORA, CORORL, and CORORH two-char / one-char paths (file may be missing)."""
     c2, c1 = _pick_two_one(mapping_dir, "CORORA")
     l2, l1 = _pick_two_one(mapping_dir, "CORORL")
-    return MappingFileSet(corora_two=c2, corora_one=c1, cororl_two=l2, cororl_one=l1)
+    h2, h1 = _pick_two_one(mapping_dir, "CORORH")
+    return MappingFileSet(
+        corora_two=c2,
+        corora_one=c1,
+        cororl_two=l2,
+        cororl_one=l1,
+        cororh_two=h2,
+        cororh_one=h1,
+    )
 
 
 def default_corora_mapping_paths(mapping_dir: Path) -> tuple[Path, Path]:
@@ -193,8 +224,9 @@ def normalize_user_error_field_input(raw: str) -> str:
 
 
 def _error_field_core_fragment(normalized: str) -> str:
-    """Strip CORORA-R- / CORORL-R- prefix before reserved check."""
-    for prefix in ("CORORA-R-", "CORORL-R-"):
+    """Strip any ``<FAMILY>-R-`` prefix before the reserved-keyword check."""
+    for fam in MAPPING_FAMILIES:
+        prefix = f"{fam}-R-"
         if normalized.startswith(prefix):
             return normalized[len(prefix) :]
     return normalized
@@ -289,12 +321,12 @@ def find_mapping_rows_matching_field(
     min_needle_len: int = 2,
 ) -> list[tuple[str, str, str]]:
     """
-    Scan CORORA / CORORL mapping fragments for 88 lines whose condition name
+    Scan every family's mapping fragments for 88 lines whose condition name
     contains any search needle.
 
     Returns ``(condition_name, value_literal, file_kind)`` where ``file_kind`` is
-    ``two_char_corora``, ``one_char_corora``, ``two_char_cororl``, or
-    ``one_char_cororl``.
+    ``two_char_<family>`` or ``one_char_<family>`` with ``<family>`` lowercased
+    (e.g. ``two_char_corora``, ``one_char_cororh``).
     """
     needles = field_search_needles(user_query)
     needles = [n for n in needles if len(n) >= min_needle_len]
@@ -318,10 +350,12 @@ def find_mapping_rows_matching_field(
                 seen.add(key)
                 out.append(key)
 
-    _scan(paths.corora_two, "two_char_corora")
-    _scan(paths.corora_one, "one_char_corora")
-    _scan(paths.cororl_two, "two_char_cororl")
-    _scan(paths.cororl_one, "one_char_cororl")
+    two_paths = paths.two_char_paths()
+    one_paths = paths.one_char_paths()
+    for fam in MAPPING_FAMILIES:
+        fam_key = fam.lower()
+        _scan(two_paths[fam], f"two_char_{fam_key}")
+        _scan(one_paths[fam], f"one_char_{fam_key}")
     return out
 
 
