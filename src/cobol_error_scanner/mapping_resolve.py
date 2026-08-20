@@ -13,8 +13,10 @@ from cobol_error_scanner.cobol_parse import (
 )
 from cobol_error_scanner.mapping_catalog import (
     MAPPING_FAMILIES,
+    MappingDefinition,
     MappingFileSet,
     default_mapping_paths,
+    find_mapping_definitions_matching_field,
     find_mapping_rows_matching_field,
     load_inv_transit_mode_second_char,
     load_one_char_error_type_map,
@@ -681,6 +683,67 @@ def _occ_matches_field_names(o: ErrorOccurrence, matched_names: set[str]) -> boo
     return any(n in st for n in matched_names)
 
 
+def _mapping_definition_fallback(
+    defs: list[MappingDefinition],
+    query: str,
+) -> list[ProgramSummary]:
+    """
+    Build informational findings when a field query matches one or more mapping
+    definitions but no COBOL ``SET``/``MOVE`` logic sets them.
+
+    This turns a confusing empty result into an explicit record that the field is
+    known to the copybook (with its derived code), flagging commented-out entries.
+    """
+    by_file: dict[str, list[ErrorOccurrence]] = {}
+    for d in defs:
+        if d.kind.startswith("one_char") and len(d.value) == 1:
+            code = "E" + d.value
+        else:
+            code = d.value
+        state = "commented-out/disabled in copybook" if d.commented else "active in copybook"
+        note = (
+            f"Defined in {d.family} mapping {d.path.name} (line {d.line_no}; {state}); "
+            f"derived code {code}; no COBOL SET/MOVE logic found for this field."
+        )
+        occ = ErrorOccurrence(
+            code=code,
+            literal_kind="alnum",
+            location=SourceLocation(path=d.path, line=d.line_no),
+            setting_statement=d.raw_line.strip(),
+            paragraph=None,
+            section=None,
+            logic_context=note,
+            condition="",
+            parameters_text="",
+            error_message_literal="",
+            error_field=d.name,
+            mapping_detail=note,
+        )
+        summary_state = "commented-out" if d.commented else "no COBOL logic"
+        occ.row_summary = f"{d.name} — mapping definition only ({summary_state})"
+        by_file.setdefault(str(d.path.resolve()), []).append(occ)
+
+    out: list[ProgramSummary] = []
+    for path_key in sorted(by_file):
+        occs = sorted(by_file[path_key], key=lambda o: o.location.line)
+        path = Path(path_key)
+        pid = _program_id_from_path(path)
+        ps = ProgramSummary(
+            program_id=pid,
+            source_path=path,
+            occurrences=occs,
+            search_blob=" ".join(
+                [pid, path_key, query] + [o.error_field for o in occs]
+            ),
+        )
+        ps.plain_english = (
+            f"'{query}' is defined in mapping copybook {path.name} "
+            f"({len(occs)} entry/entries) but no COBOL SET/MOVE logic sets it."
+        )
+        out.append(ps)
+    return out
+
+
 def resolve_mapped_error_field(
     source_root: Path,
     error_field_query: str,
@@ -715,7 +778,8 @@ def resolve_mapped_error_field(
             codes.add("E" + val)
 
     if not codes:
-        return []
+        defs = find_mapping_definitions_matching_field(paths, q)
+        return _mapping_definition_fallback(defs, q) if defs else []
 
     families_matched: set[str] = set()
     for _name, _val, kind in rows:
@@ -777,7 +841,17 @@ def resolve_mapped_error_field(
         ps.search_blob = " ".join(parts)
         out.append(ps)
 
-    return [p for p in out if p.occurrences]
+    result = [p for p in out if p.occurrences]
+    if result:
+        return result
+
+    # The field is defined in a mapping copybook but no COBOL SET/MOVE logic sets
+    # it (e.g. a commented-out / unused 88-level). Surface the definition so the
+    # search returns an explanatory record instead of an empty result.
+    defs = find_mapping_definitions_matching_field(paths, q)
+    if defs:
+        return _mapping_definition_fallback(defs, q)
+    return []
 
 
 def apply_mapping_filter_fallback(
