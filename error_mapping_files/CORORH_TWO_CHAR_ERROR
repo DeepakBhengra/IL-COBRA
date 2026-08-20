@@ -1,0 +1,141 @@
+025200     05  CORORH-R-ERROR-TYPE-U      REDEFINES                     ROR99135
+025300         CORORH-R-RECORD-RESPONSE.                                ROR99135
+025400         10  CORORH-R-ERROR-TYPE-U       PIC X(02).               TEH05069
+025500           88 CORORH-R-ERROR-TABLE-ENTRY     VALUE 'UA'.          TEH05069
+025600           88 CORORH-R-ERROR-CULGEM-READ     VALUE 'UB'.          ROR99135
+025700           88 CORORH-R-ERROR-PRIORITY-CODE   VALUE 'UC'.          ROR99145
+025800           88 CORORH-R-ERROR-PROMISE-DATE    VALUE 'UD'.          ROR99145
+025900           88 CORORH-R-ERROR-INSUFF-INPUT    VALUE 'UI'.          ROR99145
+026000           88 CORORH-R-ERROR-DB2-NOT-AVAIL   VALUE 'U1'.          ROR99135
+026100           88 CORORH-R-ERROR-DB2-INSERT      VALUE 'U2'.          ROR99135
+026200           88 CORORH-R-ERROR-DB2-DELETE      VALUE 'U3'.          ROR99135
+026300           88 CORORH-R-ERROR-ORDER-NOT-FOUND VALUE 'U4'.          ROR99135
+026400           88 CORORH-R-ERROR-REQUEST         VALUE 'U7'.          ROR99135
+026500           88 CORORH-R-ERROR-INVLD-OPID      VALUE 'U8'.          PKV09266
+026501           88 CORORH-R-ERROR-INVL-SERNBR-SW  VALUE 'U9'.          PKV09266
+026502*  NEW AUCTION ERROR TYPES                                        ROR99145
+026600     05  CORORH-R-ERROR-TYPE-A      REDEFINES                     ROR99145
+026700         CORORH-R-RECORD-RESPONSE.                                ROR99145
+026800         10  CORORH-R-ERROR-TYPE-AUCTION PIC X(02).               ROR99145
+026900           88  CORORH-R-ERROR-PO-MISMATCH      VALUE 'CA'.        ROR99145
+027000           88  CORORH-R-ERROR-DATE-MISMATCH    VALUE 'CB'.        ROR99145
+027100           88  CORORH-R-ERROR-SYSTEM-ID        VALUE 'CC'.        ROR99145
+027200           88  CORORH-R-ERROR-AUC-NOT-FLAGGED  VALUE 'CD'.        ROR99145
+027300     05  CORORH-R-ERROR-TYPE-NEW    REDEFINES                     ROR99250
+027400         CORORH-R-RECORD-RESPONSE.                                ROR99250
+027500         10  CORORH-R-ERROR-TYPE-NEW     PIC X(02).               ROR99250
+027600*          88 CORORH-R-ERROR-DENIED-NAME     VALUE 'B1'.          SXG03305
+027700*          88 CORORH-R-ERROR-DENIED-ADD1     VALUE 'B2'.          SXG03305
+027800*          88 CORORH-R-ERROR-DENIED-ADD2     VALUE 'B3'.          SXG03305
+027900*          88 CORORH-R-ERROR-DENIED-ADD3     VALUE 'B4'.          SXG03305
+028000*          88 CORORH-R-ERROR-DEN-BILL-ADD1   VALUE 'B5'.          SXG03305
+028100*          88 CORORH-R-ERROR-DEN-BILL-ADD2   VALUE 'B6'.          SXG03305
+028200*          88 CORORH-R-ERROR-DEN-BILL-ADD3   VALUE 'B7'.          SXG03305
+028210           88 CORORH-R-ERR-INVALID-FFWDR     VALUE 'GA'.          ROR05167
+028220           88 CORORH-R-ERR-INACTIVE-FFWDR    VALUE 'GB'.          ROR05167
+028300           88 CORORH-R-ERROR-D-COUNTRY       VALUE 'X0'.          ROR00080
+028400           88 CORORH-R-ERROR-NO-DEF-WHSE     VALUE 'X1'.          ROR00080
+028410*          88 CORORH-R-ERROR-INVALID-CNTRY   VALUE 'X2'.          SXG03305
+028420           88 CORORH-R-ERROR-E-COUNTRY       VALUE 'X3'.          SXG03305
+028430           88 CORORH-R-ERROR-INV-DV-FLAG     VALUE 'Y1'.          ROR04116
+028440           88 CORORH-R-ERROR-CANT-DECLINE    VALUE 'Y2'.          ROR04116
+                 88 CORORH-R-ERR-GLN-SUFF-AND-ADDR VALUE 'GS'.          AYB24152
+                 88 CORORH-R-ERR-PARTNER-NOT-FIND  VALUE 'G2'.          AYB24152
+                 88 CORORH-R-ERR-STR-XREF-NOT-RSLV VALUE 'G3'.          AYB24152
+                 88 CORORH-R-ERR-BAD-SHIP-TO-SUFF  VALUE 'G4'.          AYB24152
+                 88 CORORH-R-ERR-INV-CISCO-IND     VALUE 'HA'.          KXS25010
+                 88 CORORH-R-ERR-NOT-ALW-CISCO-IND VALUE 'HB'.          KXS25010
+028500     05  CORORH-R-ERROR-TYPE-T       REDEFINES                    ROR99270
+028600         CORORH-R-RECORD-RESPONSE.                                ROR99270
+028700         10  CORORH-R-ERROR-TYPE-TELENOR PIC X(02).               ROR99270
+028800           88 CORORH-R-ERROR-MISSING-IS-NUM  VALUE 'T1'.          ROR99270
+028900           88 CORORH-R-ERROR-TBITELIS        VALUE 'T2'.          ROR99270
+029000           88 CORORH-R-ERROR-TBIARRVS        VALUE 'T3'.          ROR99270
+029100     05  CORORH-R-ERROR-TYPE-S       REDEFINES                    DXO99270
+029200         CORORH-R-RECORD-RESPONSE.                                DXO99270
+029300         10  CORORH-R-ERROR-TYPE-SEL-SRC PIC X(02).               DXO99270
+029400           88 CORORH-R-ERROR-WRONG-MASTER    VALUE 'S1'.          DXO99270
+029500           88 CORORH-R-ERROR-END-USER-MISS   VALUE 'S2'.          DXO99270
+029600           88 CORORH-R-ERROR-RESELLER-MISS   VALUE 'S4'.          ROR01332
+029601           88 CORORH-R-ERROR-XREF-RES-MISS   VALUE 'S5'.          ROR01332
+029602           88 CORORH-R-ERR-NO-SEC-TERM-OVRD  VALUE 'SE'.          ROR05314
+029603           88 CORORH-R-ERR-NO-SEC-FRT-OVRDE  VALUE 'SF'.          ROR05314
+029604           88 CORORH-R-ERR-NO-SEC-MISS-OPER  VALUE 'SG'.          ROR05314
+029605           88 CORORH-R-ERR-NO-SEC-TERM-992   VALUE 'SH'.          ROR05314
+029606           88 CORORH-R-ERR-NO-CPO3-ALLOW-P   VALUE 'SI'.          ROR05314
+029607           88 CORORH-R-ERR-NO-SEC-FRT-OVR-P  VALUE 'SJ'.          ROR05314
+           05  CORORH-R-ERROR-APPLE-DEP    REDEFINES                    ABM18097
+               CORORH-R-RECORD-RESPONSE.                                ABM18097
+               10  CORORH-R-ERROR-APPLE-DEP    PIC X(02).               ABM18097
+                 88 CORORH-R-ERR-NO-DEP-ORD-NBR    VALUE 'A1'.          ABM18097
+                 88 CORORH-R-ERR-NO-RSLR-PO-NBR    VALUE 'A2'.          ABM18097
+           05  CORORH-R-ERROR-PA           REDEFINES                    VYP20193
+               CORORH-R-RECORD-RESPONSE.                                VYP20193
+               10  CORORH-R-ERROR-POWER-APP    PIC X(02).               VYP20193
+                 88 CORORH-R-ERR-STATE-CODE-ERR    VALUE 'PX'.          VYP20193
+                 88 CORORH-R-ERR-NO-STATE-CODE     VALUE 'PS'.          VYP20193
+                 88 CORORH-R-ERR-NO-CNTY-CODE      VALUE 'PC'.          VYP20193
+                 88 CORORH-R-ERR-NO-CITY-CODE      VALUE 'PK'.          VYP20193
+           05  CORORH-R-ERROR-DPAS         REDEFINES                    BYA21100
+               CORORH-R-RECORD-RESPONSE.                                BYA21100
+               10  CORORH-R-ERROR-DPAS-PRJT    PIC X(02).               BYA21100
+                 88 CORORH-R-ERR-INV-DELIVERY-DATE     VALUE 'DA'.      BYA21100
+                 88 CORORH-R-ERR-MISSING-DATE          VALUE 'DB'.      BYA21100
+                 88 CORORH-R-ERR-INV-DPAS-ID           VALUE 'DC'.      BYA21100
+                 88 CORORH-R-ERR-MISSING-DPAS-ID       VALUE 'DD'.      BYA21100
+                 88 CORORH-R-ERR-INV-DPAS-PGM-ID       VALUE 'DE'.      BYA21100
+                 88 CORORH-R-ERR-MISS-DPAS-PGM-ID      VALUE 'DF'.      BYA21100
+029608     05  CORORH-R-BR-NBR-SHIP-FROM       PIC X(02).               SXK97090
+029700     05  CORORH-R-CARRIER                PIC X(02).               JDN99015
+029800     05  CORORH-R-SHIP-VIA               PIC X(12).               JDN99015
+029900     05  CORORH-R-TAX-FLAG               PIC X(01).               ROR99015
+030000     05  CORORH-R-THIRD-PARTY-FRT-ACCT   PIC X(12).               ROR99015
+030100     05  CORORH-R-ADDRESS-LINE1          PIC X(105).              TKC07194
+030200     05  CORORH-R-ADDRESS-LINE2          PIC X(105).              TKC07194
+030300     05  CORORH-R-ADDRESS-LINE3          PIC X(105).              TKC07194
+030400     05  CORORH-R-ADDRESS-LINE4          PIC X(105).              TKC07194
+030500     05  CORORH-R-ADDRESS-LINE5.                                  TKC07194
+030600         10 CORORH-R-CITY                PIC X(21).               TKC07194
+030700         10 CORORH-R-STATE               PIC X(02).               TKC07194
+030800         10 CORORH-R-ZIP                 PIC X(09).               TKC07194
+030900         10 CORORH-R-PHONE-SPL           PIC X(15).               TKC07194
+031000         10 CORORH-R-FAX-SPL             PIC X(15).               TKC07194
+031100         10 CORORH-R-MOBILE-SPL          PIC X(15).               TKC07194
+031200         10 CORORH-R-ZIP-SPL             PIC X(06).               TKC07194
+031300         10 CORORH-R-CNTRY-SPL           PIC X(10).               TKC07194
+031301         10 CORORH-R-FILLER-SPL          PIC X(12).               TKC07194
+031302     05  CORORH-R-CONTRACT-NBR           PIC X(30).               ROR99135
+031303     05  CORORH-R-CREDIT-BAL             PIC S9(15)V99 COMP-3.    ROR99145
+031304***************************************************************   ROR99015
+031305* FOLLOWING IS FOR FUTURE USE.                                    ROR99015
+031306***************************************************************   ROR99015
+031307     05  CORORH-R-ADDR-ERR-TYPE         PIC X(02).                ROR99214
+031308         88 H-E-IA-STATE-CODE-NT-FND         VALUE 'SS'.          NXC17174
+031309         88 H-E-GRP1-ERR1                    VALUE 'S1'.          NXC17174
+031310         88 H-E-GRP1-ERR2                    VALUE 'S2'.          NXC17174
+031320         88 H-E-GRP1-ERR3                    VALUE 'S3'.          NXC17174
+031330         88 H-E-GRP1-ERR4                    VALUE 'S4'.          NXC17174
+031340         88 H-E-GRP1-ERR5                    VALUE 'S5'.          NXC17174
+031350         88 H-E-GRP1-ERR6                    VALUE 'S6'.          NXC17174
+031360         88 H-E-GRP1-ERR7                    VALUE 'S7'.          NXC17174
+031370         88 H-E-GRP1-ERR8                    VALUE 'S8'.          NXC17174
+031380         88 H-E-GRP1-ERRA                    VALUE 'SA'.          NXC17174
+031390         88 H-E-GRP1-ERRB                    VALUE 'SB'.          NXC17174
+031391         88 H-E-GRP1-ERRC                    VALUE 'SC'.          NXC17174
+031392     05  CORORH-R-ERROR-MESSAGE         PIC X(30).                TEH00259
+031393     05  CORORH-R-ENTRY-DATE            PIC X(08).                ROR01332
+031394     05  CORORH-R-ENTRY-TIME            PIC 9(06).                ROR01332
+031395     05  CORORH-R-FIRM-NAME             PIC X(50).                ROR02318
+031396     05  CORORH-R-WARNING-AREA.                                   ROR06075
+031397*        88 H-W-BAD-ADDR-ACCEPT              VALUE 'WL'.          ROR06075
+031398*        88 H-W-ADDR-MODIFIED-BY-GRP1        VALUE 'WY'.          ROR06075
+031399*        88 H-W-TAXED-ORDER                  VALUE 'WT'.          ROR06075
+031400*        88 H-W-AGENCY-ORDER                 VALUE 'WA'.          ROR06075
+031500*        88 H-W-HOLD-ON-CARR-ERR             VALUE 'WV'.          ROR06075
+031600*        88 H-W-HOLD-ON-3PTY-ERR             VALUE 'WP'.          ROR06075
+031700*        88 H-W-HOLD-ON-ADDR-GRP1-ERR        VALUE 'WB'.          ROR06075
+031800*        88 H-W-HOLD-ON-APO-FPO-ERR          VALUE 'WC'.          ROR06075
+031900*        88 H-W-BASERATE-ON                  VALUE 'WK'.          ROR06075
+032000*        88 H-W-DUPLICATE-PO-FND             VALUE 'A1'.          ROR06075
+032100*        88 H-W-PROB-DUP-PO-PROCESS          VALUE 'A2'.          ROR06075
+032200*        88 H-W-CAMPAIGN                     VALUE 'W9'.          PKV09266
