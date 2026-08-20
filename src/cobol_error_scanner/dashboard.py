@@ -58,7 +58,7 @@ def apply_filters(frame: pd.DataFrame) -> pd.DataFrame:
     query = st.sidebar.text_input("Search", placeholder="condition, parameter, message, paragraph...")
     field_contains = st.sidebar.text_input(
         "Error field contains",
-        placeholder="substring of CORORA-R-… / CORORL-R-… name",
+        placeholder="substring of CORORA-R-… / CORORL-R-… / CORORH-R-… name",
         help="Filter loaded rows where the Error Field column contains this text (case-insensitive). Max 30 characters.",
         max_chars=MAX_ERROR_FIELD_INPUT_LEN,
     )
@@ -86,7 +86,7 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
     error_code_raw = st.sidebar.text_input(
         "Focused error code",
         placeholder="optional, e.g. 1C",
-        help="Optional. Run a focused scan for exactly one 2-character code, including CORORA/CORORL mapping fallback.",
+        help="Optional. Run a focused scan for exactly one 2-character code, including CORORA/CORORL/CORORH mapping fallback.",
         max_chars=8,
     )
     error_code = error_code_raw.strip()
@@ -94,9 +94,9 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
         "Focused Error Field",
         placeholder="e.g. ERR-NO-SEC-EDD-OVRD",
         help=(
-            "Optional. Max 30 characters. Substring search in CORORA and CORORL one- and two-char "
-            "mapping files (maps ERR-… to CORORA-R-ERR-… / CORORL-R-ERR-…). If set, overrides "
-            "focused error code for this run."
+            "Optional. Max 30 characters. Substring search in CORORA, CORORL, and CORORH one- and "
+            "two-char mapping files (maps ERR-… to CORORA-R-ERR-… / CORORL-R-ERR-… / CORORH-R-ERR-…). "
+            "If set, overrides focused error code for this run."
         ),
         max_chars=MAX_ERROR_FIELD_INPUT_LEN,
     )
@@ -121,8 +121,9 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
             "Mapping folder",
             str(DEFAULT_CORORA_MAPPINGS),
             help=(
-                "Folder containing CORORA_* and CORORL_* mapping fragments "
-                "(e.g. CORORA_TWO_CHAR_ERROR, CORORL_TWO_CHAR_ERROR). Leave blank to auto-detect."
+                "Folder containing CORORA_* / CORORL_* / CORORH_* mapping fragments "
+                "(e.g. CORORA_TWO_CHAR_ERROR, CORORL_TWO_CHAR_ERROR, CORORH_TWO_CHAR_ERROR). "
+                "Leave blank to auto-detect."
             ),
         )
     )
@@ -765,8 +766,8 @@ _HOW_TO_USE_MD = """
 - **COBOL source root** — folder containing `.cbl` / `.cob` / `.cpy` files.
 - **Rules file** — JSON file with `code_length`, error-code fields, and named patterns.
 - **Output folder** — where `errors.jsonl`, `manifest.json`, and the markdown table are written.
-- **Focused Error Field** *(optional)* — up to **30 characters**. Substring match against **CORORA** and **CORORL** one- and two-char mapping files (e.g. `ERR-NO-SEC-EDD-OVRD` matches `CORORA-R-ERR-…` and `CORORL-R-ERR-…`). Resolves derived two-character codes the same way as focused error-code search, then writes **`error_field_table.md`**. Overrides focused error code when both are filled.
-- **Mapping folder** *(optional)* — folder containing `CORORA_*` and `CORORL_*` mapping fragments. Leave blank to auto-detect.
+- **Focused Error Field** *(optional)* — up to **30 characters**. Substring match against **CORORA**, **CORORL**, and **CORORH** one- and two-char mapping files (e.g. `ERR-NO-SEC-EDD-OVRD` matches `CORORA-R-ERR-…`, `CORORL-R-ERR-…`, and `CORORH-R-ERR-…`). Resolves derived two-character codes the same way as focused error-code search, then writes **`error_field_table.md`**. Overrides focused error code when both are filled.
+- **Mapping folder** *(optional)* — folder containing `CORORA_*`, `CORORL_*`, and `CORORH_*` mapping fragments. Leave blank to auto-detect.
 - **Summarizer** — `heuristic` (default), `openai` (needs `OPENAI_API_KEY`), or `ollama` (local server at `localhost:11434`).
 - Click **Run scan** to generate or refresh results.
 

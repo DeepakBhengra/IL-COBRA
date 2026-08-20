@@ -7,7 +7,7 @@ Usage (no nested ``run`` subcommand — avoids ``cobol-scan run run`` mistakes):
     py -m cobol_error_scanner.cli samples -e E102
        writes out/error_table.md (only that code). Full scan uses errors_table.md by default.
     py -m cobol_error_scanner.cli samples -f ERR-NO-SEC-EDD-OVRD
-       CORORA mapping substring search; writes error_field_table.md by default.
+       CORORA/CORORL/CORORH mapping substring search; writes error_field_table.md by default.
 """
 
 from __future__ import annotations
@@ -64,8 +64,8 @@ def scan(
         "--error-field",
         "-f",
         help=(
-            "88-level name substring (max 30 chars) against CORORA and CORORL mapping copybooks, "
-            "e.g. ERR-… matches CORORA-R-ERR-… and CORORL-R-ERR-…. "
+            "88-level name substring (max 30 chars) against CORORA, CORORL, and CORORH mapping "
+            "copybooks, e.g. ERR-… matches CORORA-R-ERR-… / CORORL-R-ERR-… / CORORH-R-ERR-…. "
             "If set, takes precedence over --error-code and skips the general COBOL rules scan."
         ),
     ),
@@ -73,8 +73,9 @@ def scan(
         None,
         "--corora-mappings",
         help=(
-            "Folder with CORORA_* / CORORL_* mapping fragments "
-            "(CORORA_TWO_CHAR_ERROR, CORORL_TWO_CHAR_ERROR, etc.; default: error_mapping_files)."
+            "Folder with CORORA_* / CORORL_* / CORORH_* mapping fragments "
+            "(CORORA_TWO_CHAR_ERROR, CORORL_TWO_CHAR_ERROR, CORORH_TWO_CHAR_ERROR, etc.; "
+            "default: error_mapping_files)."
         ),
         exists=True,
         file_okay=False,

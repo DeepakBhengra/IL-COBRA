@@ -1,0 +1,19 @@
+{
+  "name": "Legacy Error Code Mapper",
+  "install": "./.cursor/install.sh",
+  "terminals": [
+    {
+      "name": "Enterprise API (:8000)",
+      "command": "COBOL_OUT_DIR=\"$PWD/out\" COBOL_API_HOST=127.0.0.1 COBOL_API_PORT=8000 ./.venv/bin/cobol-dashboard-api"
+    },
+    {
+      "name": "Classic dashboard (:8504)",
+      "command": "COBOL_OUT_DIR=\"$PWD/out\" STREAMLIT_SERVER_HEADLESS=true STREAMLIT_BROWSER_GATHER_USAGE_STATS=false ./.venv/bin/cobol-dashboard"
+    },
+    {
+      "name": "Vite dev server (:5173)",
+      "command": "cd web && npm run dev"
+    }
+  ],
+  "ports": [8000, 8504, 5173]
+}

@@ -1,4 +1,4 @@
-"""Resolve two-character error codes using CORORA / CORORL mapping files + COBOL rules."""
+"""Resolve two-character error codes using CORORA / CORORL / CORORH mapping files + COBOL rules."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from cobol_error_scanner.cobol_parse import (
     paragraph_start_line_for_source_line,
 )
 from cobol_error_scanner.mapping_catalog import (
+    MAPPING_FAMILIES,
     MappingFileSet,
     default_mapping_paths,
     find_mapping_rows_matching_field,
@@ -22,6 +23,9 @@ from cobol_error_scanner.mapping_catalog import (
     resolve_mapping_directory,
     validate_error_field_query,
 )
+
+#: Regex alternation of the supported mapping families (e.g. ``CORORA|CORORL|CORORH``).
+_FAMILY_ALT = "|".join(MAPPING_FAMILIES)
 from cobol_error_scanner.logic_extractor import enrich_corora_occurrence_control_flow
 from cobol_error_scanner.models import ErrorOccurrence, ProgramSummary, SourceLocation
 from cobol_error_scanner.scanner import iter_cobol_files
@@ -41,15 +45,16 @@ _SET_TO_TRUE = re.compile(
     re.IGNORECASE,
 )
 _MOVE_W_TO_RECORD_RESPONSE_FLAG = re.compile(
-    r"\bMOVE\s+['\"]W['\"]\s+TO\s+(CORORA|CORORL)-R-RECORD-RESPONSE-FLAG\b",
+    rf"\bMOVE\s+['\"]W['\"]\s+TO\s+({_FAMILY_ALT})-R-RECORD-RESPONSE-FLAG\b",
     re.IGNORECASE,
 )
 
 
 def _family_from_error_type_receiver(tok: str) -> str:
     t = (tok or "").upper()
-    if "CORORL-R-ERROR-TYPE" in t or t.startswith("CORORL-"):
-        return "CORORL"
+    for fam in MAPPING_FAMILIES:
+        if f"{fam}-R-ERROR-TYPE" in t or t.startswith(f"{fam}-"):
+            return fam
     return "CORORA"
 
 
@@ -121,7 +126,7 @@ def _scan_e_prefix_move_error_type_with_w_paragraph_rule(
         )
     else:
         move_pat = re.compile(
-            rf"\bMOVE\s+['\"]{re.escape(second)}['\"]\s+TO\s+((?:CORORA|CORORL)-R-ERROR-TYPE)\b",
+            rf"\bMOVE\s+['\"]{re.escape(second)}['\"]\s+TO\s+((?:{_FAMILY_ALT})-R-ERROR-TYPE)\b",
             re.IGNORECASE,
         )
     ef = (primary or "").strip()
@@ -405,33 +410,44 @@ def _scan_set_true_for_names(
 
 def _two_char_mapping_detail(
     needle: str,
-    two_corora: dict[str, list[str]],
-    two_cororl: dict[str, list[str]],
+    two_maps: dict[str, dict[str, list[str]]],
 ) -> str:
-    c, l = two_corora.get(needle, []), two_cororl.get(needle, [])
-    if c and l:
-        return (
-            f"Matched in CORORA and CORORL for code {needle}: "
-            f"CORORA={', '.join(c)}; CORORL={', '.join(l)}"
-        )
-    if c:
-        return f"CORORA two-char mapping for {needle}: {', '.join(c)}"
-    if l:
-        return f"CORORL two-char mapping for {needle}: {', '.join(l)}"
-    return ""
+    """Describe which families define ``needle`` and their condition names."""
+    present = {
+        fam: two_maps.get(fam, {}).get(needle, [])
+        for fam in MAPPING_FAMILIES
+        if two_maps.get(fam, {}).get(needle)
+    }
+    if not present:
+        return ""
+    if len(present) == 1:
+        (fam, names), = present.items()
+        return f"{fam} two-char mapping for {needle}: {', '.join(names)}"
+    families = " and ".join(present.keys())
+    detail = "; ".join(f"{fam}={', '.join(names)}" for fam, names in present.items())
+    return f"Matched in {families} for code {needle}: {detail}"
 
 
 def _e_prefix_one_char_detail(
     second: str,
-    corora_map: dict[str, str],
-    cororl_map: dict[str, str],
+    one_maps: dict[str, dict[str, str]],
 ) -> str:
-    a, b = corora_map.get(second), cororl_map.get(second)
-    if a and b and a != b:
-        return f"E-prefix 2nd char '{second}': CORORA → {a}; CORORL → {b}"
-    if a and b and a == b:
-        return f"E-prefix 2nd char '{second}': same name in both families ({a})"
-    return ""
+    """Describe which families map the E-prefix second char, when more than one does."""
+    present = {
+        fam: one_maps.get(fam, {}).get(second)
+        for fam in MAPPING_FAMILIES
+        if one_maps.get(fam, {}).get(second)
+    }
+    if len(present) <= 1:
+        return ""
+    distinct = set(present.values())
+    if len(distinct) == 1:
+        return (
+            f"E-prefix 2nd char '{second}': same name in "
+            f"{len(present)} families ({next(iter(distinct))})"
+        )
+    parts = "; ".join(f"{fam} → {name}" for fam, name in present.items())
+    return f"E-prefix 2nd char '{second}': {parts}"
 
 
 def _resolve_e_prefix_two_char_code(
@@ -439,19 +455,18 @@ def _resolve_e_prefix_two_char_code(
     *,
     needle: str,
     paths: MappingFileSet,
-    corora_one_map: dict[str, str],
-    cororl_one_map: dict[str, str],
+    one_maps: dict[str, dict[str, str]],
 ) -> dict[str, list[ErrorOccurrence]]:
     second = needle[1]
     names: list[str] = []
     seen: set[str] = set()
-    for m in (corora_one_map, cororl_one_map):
-        n = m.get(second)
+    for fam in MAPPING_FAMILIES:
+        n = one_maps.get(fam, {}).get(second)
         if n and n not in seen:
             seen.add(n)
             names.append(n)
 
-    e_detail = _e_prefix_one_char_detail(second, corora_one_map, cororl_one_map)
+    e_detail = _e_prefix_one_char_detail(second, one_maps)
 
     note_set = (
         f"E-prefix {needle}: 2nd char '{second}' → one-char maps → "
@@ -468,28 +483,18 @@ def _resolve_e_prefix_two_char_code(
         return hits
 
     chunks: list[dict[str, list[ErrorOccurrence]]] = []
-    if paths.corora_one.is_file():
-        inv_c = load_inv_transit_mode_second_char(paths.corora_one, family="CORORA")
-        if inv_c is not None and second == inv_c:
+    for fam, one_path in paths.one_char_paths().items():
+        if not one_path.is_file():
+            continue
+        inv = load_inv_transit_mode_second_char(one_path, family=fam)
+        if inv is not None and second == inv:
             chunks.append(
                 _scan_move_error_type_inv_transit_branch(
                     source_root,
                     code=needle,
                     second=second,
-                    one_path=paths.corora_one,
-                    family="CORORA",
-                )
-            )
-    if paths.cororl_one.is_file():
-        inv_l = load_inv_transit_mode_second_char(paths.cororl_one, family="CORORL")
-        if inv_l is not None and second == inv_l:
-            chunks.append(
-                _scan_move_error_type_inv_transit_branch(
-                    source_root,
-                    code=needle,
-                    second=second,
-                    one_path=paths.cororl_one,
-                    family="CORORL",
+                    one_path=one_path,
+                    family=fam,
                 )
             )
     if chunks:
@@ -557,17 +562,17 @@ def resolve_mapped_error_code(
     mapping_dir_explicit: Path | None = None,
 ) -> list[ProgramSummary]:
     """
-    Apply CORORA / CORORL mapping rules for a two-character ``error_code``.
+    Apply CORORA / CORORL / CORORH mapping rules for a two-character ``error_code``.
 
-    Non-``E`` prefix: resolve literals in **both** two-char mapping files, merge
-    condition names, and search ``SET <name> TO TRUE``. When both families define
-    the same code, :attr:`ErrorOccurrence.mapping_detail` records that.
+    Non-``E`` prefix: resolve literals in **every** family's two-char mapping file,
+    merge condition names, and search ``SET <name> TO TRUE``. When more than one
+    family defines the same code, :attr:`ErrorOccurrence.mapping_detail` records that.
 
     Leading ``E``: second character maps via each present one-char file
-    (``CORORA_ONE_CHAR_ERROR``, ``CORORL_ONE_CHAR_ERROR``); all mapped
-    ``<FAMILY>-R-ERROR-*`` names are searched for ``SET … TO TRUE``, then INV-TRANSIT
-    branches per family, then ``MOVE`` to ``<FAMILY>-R-ERROR-TYPE`` with the
-    matching family's ``MOVE 'W' TO <FAMILY>-R-RECORD-RESPONSE-FLAG`` exclusion.
+    (``CORORA_ONE_CHAR_ERROR``, ``CORORL_ONE_CHAR_ERROR``, ``CORORH_ONE_CHAR_ERROR``);
+    all mapped ``<FAMILY>-R-ERROR-*`` names are searched for ``SET … TO TRUE``, then
+    INV-TRANSIT branches per family, then ``MOVE`` to ``<FAMILY>-R-ERROR-TYPE`` with
+    the matching family's ``MOVE 'W' TO <FAMILY>-R-RECORD-RESPONSE-FLAG`` exclusion.
     """
     needle = error_code.strip().upper()
     if len(needle) != 2:
@@ -578,18 +583,18 @@ def resolve_mapped_error_code(
         return []
 
     paths = default_mapping_paths(mapping_dir)
-    two_corora = load_two_char_value_to_names(paths.corora_two)
-    two_cororl = load_two_char_value_to_names(paths.cororl_two)
-    corora_one_map = (
-        load_one_char_error_type_map(paths.corora_one, family="CORORA")
-        if paths.corora_one.is_file()
-        else {}
-    )
-    cororl_one_map = (
-        load_one_char_error_type_map(paths.cororl_one, family="CORORL")
-        if paths.cororl_one.is_file()
-        else {}
-    )
+    two_maps: dict[str, dict[str, list[str]]] = {
+        fam: load_two_char_value_to_names(path)
+        for fam, path in paths.two_char_paths().items()
+    }
+    one_maps: dict[str, dict[str, str]] = {
+        fam: (
+            load_one_char_error_type_map(path, family=fam)
+            if path.is_file()
+            else {}
+        )
+        for fam, path in paths.one_char_paths().items()
+    }
 
     chunks: list[dict[str, list[ErrorOccurrence]]] = []
 
@@ -599,22 +604,23 @@ def resolve_mapped_error_code(
                 source_root,
                 needle=needle,
                 paths=paths,
-                corora_one_map=corora_one_map,
-                cororl_one_map=cororl_one_map,
+                one_maps=one_maps,
             )
         )
         return _programs_from_chunks(chunks)
 
     names: list[str] = []
     seen_n: set[str] = set()
-    for n in two_corora.get(needle, []) + two_cororl.get(needle, []):
-        if n not in seen_n:
-            seen_n.add(n)
-            names.append(n)
+    for fam in MAPPING_FAMILIES:
+        for n in two_maps.get(fam, {}).get(needle, []):
+            if n not in seen_n:
+                seen_n.add(n)
+                names.append(n)
 
-    md = _two_char_mapping_detail(needle, two_corora, two_cororl)
+    md = _two_char_mapping_detail(needle, two_maps)
+    two_char_names = [p.name for p in paths.two_char_paths().values() if p.is_file()]
     note_set = (
-        f"Mapping: {paths.corora_two.name} + {paths.cororl_two.name} → "
+        f"Mapping: {' + '.join(two_char_names) or '(none)'} → "
         f"SET … TO TRUE ({len(names)} condition name(s))"
     )
     chunks.append(
@@ -683,9 +689,9 @@ def resolve_mapped_error_field(
     summarizer: SummarizerConfig | None = None,
 ) -> list[ProgramSummary]:
     """
-    Resolve by **Error field** substring against CORORA and CORORL mapping files,
-    then run the same COBOL resolution as :func:`resolve_mapped_error_code` for
-    each derived two-character code.
+    Resolve by **Error field** substring against CORORA, CORORL, and CORORH mapping
+    files, then run the same COBOL resolution as :func:`resolve_mapped_error_code`
+    for each derived two-character code.
     """
     q = validate_error_field_query(error_field_query)
     if len(q) < 2:
@@ -711,11 +717,18 @@ def resolve_mapped_error_field(
     if not codes:
         return []
 
-    dual_corora = any(k.startswith("two_char_corora") or k.startswith("one_char_corora") for _, _, k in rows)
-    dual_cororl = any(k.startswith("two_char_cororl") or k.startswith("one_char_cororl") for _, _, k in rows)
+    families_matched: set[str] = set()
+    for _name, _val, kind in rows:
+        fam = kind.rsplit("_char_", 1)[-1].upper()
+        if fam in MAPPING_FAMILIES:
+            families_matched.add(fam)
     field_md = ""
-    if dual_corora and dual_cororl:
-        field_md = "Field search matched rows in both CORORA and CORORL mapping files."
+    if len(families_matched) > 1:
+        ordered = [f for f in MAPPING_FAMILIES if f in families_matched]
+        field_md = (
+            "Field search matched rows in multiple mapping families: "
+            f"{', '.join(ordered)}."
+        )
 
     merged: dict[str, list[ErrorOccurrence]] = {}
     for code in sorted(codes):

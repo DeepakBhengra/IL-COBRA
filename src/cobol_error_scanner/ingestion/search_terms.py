@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import re
 
-from cobol_error_scanner.mapping_catalog import MAX_ERROR_FIELD_INPUT_LEN
+from cobol_error_scanner.mapping_catalog import MAPPING_FAMILIES, MAX_ERROR_FIELD_INPUT_LEN
 from cobol_error_scanner.models import ProgramSummary
 
+_FAMILY_PREFIX_ALT = "|".join(
+    p for fam in MAPPING_FAMILIES for p in (f"{fam}-R-", f"{fam}-")
+)
 _FIELD_SUFFIX_RE = re.compile(
-    r"(?:CORORA-R-|CORORL-R-|CORORA-|CORORL-)?(ERR(?:OR)?-[A-Z0-9-]+|ERROR-[A-Z0-9-]+)",
+    rf"(?:{_FAMILY_PREFIX_ALT})?(ERR(?:OR)?-[A-Z0-9-]+|ERROR-[A-Z0-9-]+)",
     re.IGNORECASE,
 )
 
@@ -25,14 +28,12 @@ def field_aliases(full_field: str) -> list[str]:
         for alias in (suffix, suffix.replace("ERROR-", "ERR-")):
             if alias and alias not in aliases:
                 aliases.append(alias[:MAX_ERROR_FIELD_INPUT_LEN])
-    if upper.startswith("CORORL-R-"):
-        tail = upper[len("CORORL-R-") :][:MAX_ERROR_FIELD_INPUT_LEN]
-        if tail and tail not in aliases:
-            aliases.append(tail)
-    if upper.startswith("CORORA-R-"):
-        tail = upper[len("CORORA-R-") :][:MAX_ERROR_FIELD_INPUT_LEN]
-        if tail and tail not in aliases:
-            aliases.append(tail)
+    for fam in MAPPING_FAMILIES:
+        prefix = f"{fam}-R-"
+        if upper.startswith(prefix):
+            tail = upper[len(prefix) :][:MAX_ERROR_FIELD_INPUT_LEN]
+            if tail and tail not in aliases:
+                aliases.append(tail)
     return aliases
 
 
