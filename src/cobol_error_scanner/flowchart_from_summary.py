@@ -35,6 +35,9 @@ class DecisionStep:
 
     kind: Literal["IF", "WHEN"]
     predicate: str
+    #: For IF steps: "then" if the error path is taken when the condition is TRUE,
+    #: "else" if via the ELSE branch, "" if unknown (legacy summaries).
+    branch: str = ""
 
 
 @dataclass
@@ -122,7 +125,12 @@ def parse_row_summary(text: str) -> ParsedSummary:
             out.steps.append(DecisionStep(kind="WHEN", predicate=pred))
         elif u.startswith("IF "):
             pred = seg[3:].strip()
-            out.steps.append(DecisionStep(kind="IF", predicate=pred))
+            branch = ""
+            bm = re.search(r"\s*\[(true|false)\]\s*$", pred, re.IGNORECASE)
+            if bm:
+                branch = "then" if bm.group(1).lower() == "true" else "else"
+                pred = pred[: bm.start()].strip()
+            out.steps.append(DecisionStep(kind="IF", predicate=pred, branch=branch))
         else:
             # Unknown segment; keep as IF-shaped label for visibility.
             out.steps.append(DecisionStep(kind="IF", predicate=seg))
@@ -160,8 +168,10 @@ def build_mermaid(
     inner-to-outer storage). A simple ``condition`` fallback yields one
     decision diamond.
 
-    For **IF** nodes, **False** continues toward the error path and **True**
-    branches to "No error on this branch". **WHEN** nodes use Match / No match.
+    For **IF** nodes, the branch that reaches the error (``DecisionStep.branch``)
+    continues toward the error path and the opposite branch goes to "No error on
+    this branch"; when the branch is unknown, **False** continues (legacy default).
+    **WHEN** nodes use Match / No match.
     """
     lines: list[str] = ["flowchart TD"]
     used_ids: dict[str, int] = {}
@@ -183,46 +193,51 @@ def build_mermaid(
         lines.append(f"    {start_id} --> {leaf_id}")
         return "\n".join(lines) + "\n"
 
-    prev_id = start_id
+    # Create the decision diamonds (outer -> inner) up front so each diamond can
+    # label its OWN two outgoing edges (error path vs. no-error path).
+    diamonds: list[tuple[str, DecisionStep]] = []
     for st in steps:
         node_id = _next_node_id(st.kind, used_ids)
         # Quoted rhombus id{"…"}: COBOL ``( )`` in predicates breaks ``{{…}}`` subroutine grammar.
         label = _mermaid_safe_inner_text(f"{st.kind} {st.predicate}")
         lines.append(f'    {node_id}{{"{label}"}}')
+        diamonds.append((node_id, st))
 
+    end_id = _next_node_id("Set", used_ids)
+    act = parsed.action or parsed.raw_summary or "Set error / continue path"
+    lines.append(f'    {end_id}["{_mermaid_safe_inner_text(act)}"]')
+
+    lines.append(f"    {start_id} --> {diamonds[0][0]}")
+
+    for i, (node_id, st) in enumerate(diamonds):
+        nxt = diamonds[i + 1][0] if i + 1 < len(diamonds) else end_id
         if st.kind == "WHEN":
             lines.append(
-                f'    {prev_id} -->|"{_mermaid_safe_inner_text(when_match_label, max_len=40)}"| {node_id}'
+                f'    {node_id} -->|"{_mermaid_safe_inner_text(when_match_label, max_len=40)}"| {nxt}'
             )
             alt_id = _next_node_id("Else", used_ids)
             wel = _mermaid_safe_inner_text(when_else_label, max_len=80)
             lines.append(f'    {alt_id}(["{wel}"])')
             lines.append(
-                f'    {prev_id} -->|"{_mermaid_safe_inner_text(when_else_label, max_len=40)}"| {alt_id}'
+                f'    {node_id} -->|"{_mermaid_safe_inner_text(when_else_label, max_len=40)}"| {alt_id}'
             )
         else:
-            # False continues toward the error path; True exits with no error.
+            # The branch that reaches the error continues toward it; the other
+            # branch exits with no error. Unknown branch defaults to False (legacy).
+            err_label, skip_label = (
+                (true_label, false_label)
+                if st.branch == "then"
+                else (false_label, true_label)
+            )
             lines.append(
-                f'    {prev_id} -->|"{_mermaid_safe_inner_text(false_label, max_len=40)}"| {node_id}'
+                f'    {node_id} -->|"{_mermaid_safe_inner_text(err_label, max_len=40)}"| {nxt}'
             )
             skip_id = _next_node_id("Skip", used_ids)
             skip_txt = _mermaid_safe_inner_text("No error on this branch", max_len=80)
             lines.append(f'    {skip_id}(["{skip_txt}"])')
             lines.append(
-                f'    {prev_id} -->|"{_mermaid_safe_inner_text(true_label, max_len=40)}"| {skip_id}'
+                f'    {node_id} -->|"{_mermaid_safe_inner_text(skip_label, max_len=40)}"| {skip_id}'
             )
-
-        prev_id = node_id
-
-    end_id = _next_node_id("Set", used_ids)
-    act = parsed.action or parsed.raw_summary or "Set error / continue path"
-    lines.append(f'    {end_id}["{_mermaid_safe_inner_text(act)}"]')
-    last_step = steps[-1]
-    if last_step.kind == "WHEN":
-        outcome_edge = _mermaid_safe_inner_text(when_match_label, max_len=40)
-    else:
-        outcome_edge = _mermaid_safe_inner_text(false_label, max_len=40)
-    lines.append(f'    {prev_id} -->|"{outcome_edge}"| {end_id}')
 
     return "\n".join(lines) + "\n"
 
@@ -261,32 +276,37 @@ def build_dot(
         lines.append("}")
         return "\n".join(lines) + "\n"
 
-    prev_id = start_id
+    diamonds: list[tuple[str, DecisionStep]] = []
     for st in steps:
         nid = _next_node_id(st.kind, used_ids)
         lbl = _sanitize_label(f"{st.kind} {st.predicate}")
         lines.append(f'  {nid} [shape=diamond, label="{lbl}"];')
-        if st.kind == "WHEN":
-            alt_id = _next_node_id("Else", used_ids)
-            lines.append(f'  {alt_id} [shape=box, label="{_sanitize_label(when_else_label)}"];')
-            lines.append(f'  {prev_id} -> {nid} [label="{_sanitize_label(when_match_label)}"];')
-            lines.append(f'  {prev_id} -> {alt_id} [label="{_sanitize_label(when_else_label)}"];')
-        else:
-            skip_id = _next_node_id("Skip", used_ids)
-            lines.append(f'  {skip_id} [shape=box, label="{_sanitize_label("No error on this branch")}"];')
-            lines.append(f'  {prev_id} -> {nid} [label="{_sanitize_label(false_label)}"];')
-            lines.append(f'  {prev_id} -> {skip_id} [label="{_sanitize_label(true_label)}"];')
-        prev_id = nid
+        diamonds.append((nid, st))
 
     end_id = _next_node_id("Set", used_ids)
     act = parsed.action or parsed.raw_summary or "Set error"
     lines.append(f'  {end_id} [shape=box, label="{_sanitize_label(act)}"];')
-    last_step = steps[-1]
-    if last_step.kind == "WHEN":
-        outcome_edge = _sanitize_label(when_match_label)
-    else:
-        outcome_edge = _sanitize_label(false_label)
-    lines.append(f'  {prev_id} -> {end_id} [label="{outcome_edge}"];')
+
+    lines.append(f"  {start_id} -> {diamonds[0][0]};")
+
+    for i, (nid, st) in enumerate(diamonds):
+        nxt = diamonds[i + 1][0] if i + 1 < len(diamonds) else end_id
+        if st.kind == "WHEN":
+            alt_id = _next_node_id("Else", used_ids)
+            lines.append(f'  {alt_id} [shape=box, label="{_sanitize_label(when_else_label)}"];')
+            lines.append(f'  {nid} -> {nxt} [label="{_sanitize_label(when_match_label)}"];')
+            lines.append(f'  {nid} -> {alt_id} [label="{_sanitize_label(when_else_label)}"];')
+        else:
+            skip_id = _next_node_id("Skip", used_ids)
+            err_label, skip_label = (
+                (true_label, false_label)
+                if st.branch == "then"
+                else (false_label, true_label)
+            )
+            lines.append(f'  {skip_id} [shape=box, label="{_sanitize_label("No error on this branch")}"];')
+            lines.append(f'  {nid} -> {nxt} [label="{_sanitize_label(err_label)}"];')
+            lines.append(f'  {nid} -> {skip_id} [label="{_sanitize_label(skip_label)}"];')
+
     lines.append("}")
     return "\n".join(lines) + "\n"
 

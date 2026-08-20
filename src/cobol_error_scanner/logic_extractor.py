@@ -39,10 +39,23 @@ def _if_end_counts(line: str) -> tuple[int, int]:
     return n_if, n_end
 
 
+def _ends_cobol_sentence(line: str) -> bool:
+    """True if *line* terminates a COBOL sentence (trailing period in code area)."""
+    if _line_counts_as_comment(line):
+        return False
+    return line.rstrip().endswith(".")
+
+
 def find_preceding_if_line(lines: list[str], move_idx: int) -> int | None:
     """
     Given a 0-based line index of a statement inside an IF/END-IF block, return the line index
     of the IF that most tightly encloses that statement, or None.
+
+    A COBOL period terminates the current sentence and closes any still-open ``IF``
+    scopes, so when the backward scan reaches a sentence-terminating period at the
+    same nesting level (before finding an enclosing ``IF``), the statement is not
+    inside that earlier ``IF`` and ``None`` is returned. This avoids attaching
+    period-terminated ``IF`` statements from a previous sentence.
     """
     nest = 0
     for i in range(move_idx - 1, -1, -1):
@@ -50,6 +63,8 @@ def find_preceding_if_line(lines: list[str], move_idx: int) -> int | None:
         nest += n_end - n_if
         if nest < 0:
             return i
+        if nest == 0 and _ends_cobol_sentence(lines[i]):
+            return None
     return None
 
 
@@ -64,6 +79,36 @@ def find_matching_end_if(lines: list[str], if_idx: int) -> int | None:
         if nest == 0:
             return j
     return None
+
+
+_ELSE_LINE = re.compile(r"^\s*ELSE\b", re.IGNORECASE)
+
+
+def if_branch_for_line(lines: list[str], if_idx: int, target_idx: int) -> str:
+    """
+    Decide whether ``target_idx`` (0-based) sits in the THEN or ELSE branch of the
+    ``IF`` at ``if_idx``.
+
+    Returns ``"then"`` when the statement is reached while the condition is TRUE
+    (the IF body before any ``ELSE``), or ``"else"`` when it is reached via the
+    IF's ``ELSE`` branch. Plain ``IF … END-IF`` blocks (no ``ELSE``) are ``"then"``.
+    """
+    end_idx = find_matching_end_if(lines, if_idx)
+    if end_idx is None:
+        end_idx = len(lines)
+    inner = 0
+    for j in range(if_idx + 1, end_idx):
+        line = lines[j]
+        if _line_counts_as_comment(line):
+            continue
+        # An ELSE encountered at the immediate nesting level belongs to this IF.
+        if inner == 0 and _ELSE_LINE.match(line):
+            return "then" if target_idx < j else "else"
+        n_if, n_end = _if_end_counts(line)
+        inner += n_if - n_end
+        if inner < 0:
+            break
+    return "then"
 
 
 _IF_HEADER = re.compile(r"^\s*IF\s+(.+?)\s*(?:THEN)?\s*\.?\s*$", re.IGNORECASE)
@@ -272,12 +317,40 @@ def collect_enclosing_if_predicates(
     the error line; avoids implicit ``IF`` without ``END-IF`` leaking into the next
     paragraph).
     """
+    return [
+        pred
+        for pred, _branch in collect_enclosing_if_steps(
+            lines,
+            set_line_1based,
+            max_depth=max_depth,
+            max_upward_lines=max_upward_lines,
+            min_if_line_1based=min_if_line_1based,
+        )
+    ]
+
+
+def collect_enclosing_if_steps(
+    lines: list[str],
+    set_line_1based: int,
+    *,
+    max_depth: int = 16,
+    max_upward_lines: int = 100,
+    min_if_line_1based: int | None = None,
+) -> list[tuple[str, str]]:
+    """
+    Like :func:`collect_enclosing_if_predicates`, but also reports which branch of
+    each enclosing ``IF`` reaches the statement.
+
+    Returns ``(predicate, branch)`` pairs from **innermost** to **outermost**,
+    where ``branch`` is ``"then"`` (statement reached when the condition is TRUE)
+    or ``"else"`` (reached via the ``ELSE`` branch).
+    """
     idx = set_line_1based - 1
     if idx < 0 or idx >= len(lines):
         return []
-    preds: list[str] = []
+    steps: list[tuple[str, str]] = []
     cur = idx
-    while len(preds) < max_depth:
+    while len(steps) < max_depth:
         if_line = find_preceding_if_line(lines, cur)
         if if_line is None:
             break
@@ -287,10 +360,11 @@ def collect_enclosing_if_predicates(
         if set_line_1based - if_line_1based > max_upward_lines:
             break
         pred = extend_if_predicate(lines, if_line, cur)
+        branch = if_branch_for_line(lines, if_line, idx)
         if pred:
-            preds.append(pred)
+            steps.append((pred, branch))
         cur = if_line
-    return preds
+    return steps
 
 
 def collect_evaluate_when_branch(lines: list[str], set_line_1based: int) -> list[str]:
@@ -336,12 +410,13 @@ def enrich_corora_occurrence_control_flow(
     ``paragraph_start_line`` (1-based): only ``IF`` headers on or after this line
     are included in the chain (same paragraph as the error statement).
     """
-    if_chain = collect_enclosing_if_predicates(
+    if_steps = collect_enclosing_if_steps(
         lines,
         occ.location.line,
         max_upward_lines=max_upward_lines,
         min_if_line_1based=paragraph_start_line,
     )
+    if_chain = [pred for pred, _ in if_steps]
     when_chain = collect_evaluate_when_branch(lines, occ.location.line)
 
     idents_ordered: list[str] = []
@@ -363,10 +438,13 @@ def enrich_corora_occurrence_control_flow(
         p = w.strip()
         if p:
             layers.append(f"WHEN {p[:140]}{'...' if len(p) > 140 else ''}")
-    for pred in if_chain:
+    for pred, branch in if_steps:
         p = pred.strip()
         if p:
-            layers.append(f"IF {p[:140]}{'...' if len(p) > 140 else ''}")
+            # Marker records the branch that reaches the error: [true] = error set
+            # when the condition holds; [false] = error set via the IF's ELSE.
+            marker = " [true]" if branch == "then" else " [false]"
+            layers.append(f"IF {p[:140]}{'...' if len(p) > 140 else ''}{marker}")
 
     if layers:
         path = " -> ".join(layers)
