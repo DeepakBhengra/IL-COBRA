@@ -452,6 +452,81 @@ def _e_prefix_one_char_detail(
     return f"E-prefix 2nd char '{second}': {parts}"
 
 
+def _scan_move_literal_to_error_type_feeder(
+    root: Path,
+    *,
+    code: str,
+    second: str,
+    family: str,
+    mapped_name: str,
+    e_detail: str = "",
+) -> dict[str, list[ErrorOccurrence]]:
+    """
+    Indirect error-type assignment: ``MOVE '<second>' TO <feeder>`` where the same
+    program later does ``MOVE <feeder> TO <FAMILY>-R-ERROR-TYPE``.
+
+    Some programs never ``SET`` the 88-level or ``MOVE`` the literal straight into
+    ``<FAMILY>-R-ERROR-TYPE``; instead they stage the one-character error type in a
+    work field (e.g. ``WS-LU6ORH-ERROR-SW``) that is copied into the error type
+    later. Those ``MOVE '<second>' TO <feeder>`` sites are real error paths and get
+    the mapped 88-level name as their error field so field queries match them.
+    """
+    fam = family.upper()
+    feeder_to_type = re.compile(
+        rf"\bMOVE\s+([A-Z][\w-]*)\s+TO\s+{re.escape(fam)}-R-ERROR-TYPE(?![\w-])",
+        re.IGNORECASE,
+    )
+    move_literal = re.compile(
+        rf"\bMOVE\s+['\"]{re.escape(second)}['\"]\s+TO\s+([A-Z][\w-]*)",
+        re.IGNORECASE,
+    )
+    note = (
+        f"E-prefix {code}: MOVE '{second}' TO <feeder> that is later moved to "
+        f"{fam}-R-ERROR-TYPE (indirect one-char error-type assignment"
+        + (f"; {fam} → {mapped_name}" if mapped_name else "")
+        + ")"
+    )
+    ef = mapped_name or f"{fam}-R-ERROR-TYPE"
+    parser = CobolStructureParser()
+    by_file: dict[str, list[ErrorOccurrence]] = {}
+    for src in iter_cobol_files(root):
+        key = str(src.resolve())
+        raw_lines = src.read_text(encoding="utf-8", errors="replace").splitlines()
+        norm, sections = parser.parse_lines(raw_lines)
+
+        feeders: set[str] = set()
+        for line in norm:
+            if _ignore_line(line):
+                continue
+            for m in feeder_to_type.finditer(line):
+                feeders.add(m.group(1).upper())
+        if not feeders:
+            continue
+
+        for idx, line in enumerate(norm):
+            if _ignore_line(line):
+                continue
+            m = move_literal.search(line)
+            if not m:
+                continue
+            if m.group(1).upper() not in feeders:
+                continue
+            line_no = idx + 1
+            occ = _make_occurrence(
+                code=code,
+                src=src,
+                line_no=line_no,
+                statement=line.strip(),
+                sections=sections,
+                resolution_note=note,
+                error_field=ef,
+                mapping_detail=e_detail,
+            )
+            _enrich_control_flow_in_paragraph(occ, norm, sections, line_no)
+            by_file.setdefault(key, []).append(occ)
+    return by_file
+
+
 def _resolve_e_prefix_two_char_code(
     source_root: Path,
     *,
@@ -481,8 +556,30 @@ def _resolve_e_prefix_two_char_code(
         resolution_note=note_set,
         mapping_detail=e_detail,
     )
-    if hits:
-        return hits
+
+    # Indirect assignment: MOVE '<second>' TO <feeder> where <feeder> is later
+    # moved into <FAMILY>-R-ERROR-TYPE. Merge these with SET hits because a program
+    # may use the feeder mechanism even when another program uses SET for the code.
+    feeder_hits: dict[str, list[ErrorOccurrence]] = {}
+    for fam in MAPPING_FAMILIES:
+        mapped = one_maps.get(fam, {}).get(second)
+        if not mapped:
+            continue
+        feeder_hits = _merge_occurrence_dicts(
+            feeder_hits,
+            _scan_move_literal_to_error_type_feeder(
+                source_root,
+                code=needle,
+                second=second,
+                family=fam,
+                mapped_name=mapped,
+                e_detail=e_detail,
+            ),
+        )
+
+    combined = _merge_occurrence_dicts(hits, feeder_hits)
+    if combined:
+        return combined
 
     chunks: list[dict[str, list[ErrorOccurrence]]] = []
     for fam, one_path in paths.one_char_paths().items():
