@@ -101,6 +101,45 @@ def test_field_matched_in_two_families_reports_family_without_cobol_logic(
     assert "no COBOL SET/MOVE logic" in (cororh.mapping_detail or "")
 
 
+def test_indirect_error_type_feeder_move_is_detected(tmp_path: Path) -> None:
+    # Error type is staged in a work field that is later moved into
+    # CORORH-R-ERROR-TYPE, rather than SET directly. The MOVE '<char>' TO <feeder>
+    # site must be reported with the mapped 88-level name as its error field.
+    mapping = tmp_path / "error_mapping_files"
+    mapping.mkdir()
+    (mapping / "CORORH_ONE_CHAR_ERROR").write_text(
+        "       10 CORORH-R-ERROR-TYPE PIC X(01).\n"
+        "           88 CORORH-R-ERROR-BACKORDER-FLAG VALUE 'B'.\n",
+        encoding="utf-8",
+    )
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "PROG020.cob").write_text(
+        "       PROCEDURE DIVISION.\n"
+        "       0000-MAIN.\n"
+        "           IF CORORH-BCK-ALLOW-BACKORDERS\n"
+        "              NEXT SENTENCE\n"
+        "           ELSE\n"
+        "              MOVE 'B' TO WS-LU6ORH-ERROR-SW\n"
+        "           END-IF.\n"
+        "           MOVE WS-LU6ORH-ERROR-SW TO CORORH-R-ERROR-TYPE.\n",
+        encoding="utf-8",
+    )
+
+    programs = resolve_mapped_error_field(
+        src, "ERROR-BACKORDER-FLAG", mapping_dir_explicit=mapping
+    )
+
+    assert len(programs) == 1
+    assert programs[0].program_id == "PROG020"
+    occ = programs[0].occurrences[0]
+    assert occ.code == "EB"
+    assert occ.error_field == "CORORH-R-ERROR-BACKORDER-FLAG"
+    assert "WS-LU6ORH-ERROR-SW" in occ.setting_statement
+    # The nested IF condition is captured in the row summary.
+    assert "CORORH-BCK-ALLOW-BACKORDERS" in (occ.row_summary or "")
+
+
 def test_active_mapping_field_with_logic_is_not_a_fallback(tmp_path: Path) -> None:
     mapping_dir = _write_mapping_dir(tmp_path)
     src = tmp_path / "src"
