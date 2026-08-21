@@ -556,6 +556,89 @@
   color: var(--text-muted);
 }
 
+/* Enlarged pop-up view for the control flow chart. */
+.detail-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.flowchart-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.flowchart-modal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(1200px, 96vw);
+  height: min(90vh, 900px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.flowchart-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.flowchart-modal-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.flowchart-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 18px;
+  display: flex;
+}
+
+.flowchart-modal-body .mermaid-chart-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mermaid-chart-shell.is-fullscreen .mermaid-viewport {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
 .scan-form {
   max-width: 560px;
 }
