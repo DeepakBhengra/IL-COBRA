@@ -272,12 +272,19 @@ Headers:
 - **`X-API-Key`** — must match **`COBOL_EXTERNAL_API_KEY`**
 - **`X-Application-Key`** — must match **`COBOL_EXTERNAL_APPLICATION_KEY`**
 
-Set the keys before starting the API:
+Set the keys before starting the API. Either export them in the shell:
 
 ```powershell
 $env:COBOL_EXTERNAL_API_KEY = "your-secret"
 $env:COBOL_EXTERNAL_APPLICATION_KEY = "your-app-id"
 cobol-dashboard-api
+```
+
+…or create a **`.env`** file in the **repository root** (next to `pyproject.toml`). It is loaded automatically on startup (see `.env.example`); real exported environment variables take precedence over the file:
+
+```dotenv
+COBOL_EXTERNAL_API_KEY=your-secret
+COBOL_EXTERNAL_APPLICATION_KEY=your-app-id
 ```
 
 Request body accepts **exactly one** of **`error_code`** or **`error_field`**:

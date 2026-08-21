@@ -8,6 +8,8 @@ import { DETAIL_FIELDS } from "../types/findings";
 
 import { MermaidFlowChart } from "./MermaidFlowChart";
 
+import { FlowChartModal } from "./FlowChartModal";
+
 import { OperationalDocsPanel } from "./OperationalDocsPanel";
 
 
@@ -53,6 +55,12 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
   const [error, setError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
+
+  const [chartExpanded, setChartExpanded] = useState(false);
+
+  useEffect(() => {
+    setChartExpanded(false);
+  }, [index]);
 
 
 
@@ -238,7 +246,18 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
 
                   <div className="detail-field">
 
-                    <dt>Control flow chart</dt>
+                    <dt className="detail-field-heading">
+                      <span>Control flow chart</span>
+                      {chart && (
+                        <button
+                          type="button"
+                          className="link-button"
+                          onClick={() => setChartExpanded(true)}
+                        >
+                          ⤢ Enlarge
+                        </button>
+                      )}
+                    </dt>
 
                     <dd>
 
@@ -246,6 +265,7 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
                         chart={chart}
                         renderKey={index}
                         active={activeTab === "details"}
+                        onExpand={chart ? () => setChartExpanded(true) : undefined}
                       />
 
                     </dd>
@@ -277,6 +297,21 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
         </div>
 
       </aside>
+
+      {chartExpanded && chart && (
+        <FlowChartModal
+          chart={chart}
+          renderKey={index}
+          title={
+            row
+              ? [row.program, row.error_code, row.line]
+                  .filter((v) => v !== null && v !== undefined && v !== "")
+                  .join(" — ")
+              : undefined
+          }
+          onClose={() => setChartExpanded(false)}
+        />
+      )}
 
     </>
 

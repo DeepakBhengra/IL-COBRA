@@ -15,9 +15,19 @@ interface MermaidFlowChartProps {
   chart: string;
   renderKey: string | number;
   active?: boolean;
+  /** "fullscreen" grows the viewport to fill an enlarged pop-up view. */
+  variant?: "inline" | "fullscreen";
+  /** When provided, an "Enlarge" button is shown in the zoom controls. */
+  onExpand?: () => void;
 }
 
-export function MermaidFlowChart({ chart, renderKey, active = true }: MermaidFlowChartProps) {
+export function MermaidFlowChart({
+  chart,
+  renderKey,
+  active = true,
+  variant = "inline",
+  onExpand,
+}: MermaidFlowChartProps) {
   const mermaidRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [hasRenderedChart, setHasRenderedChart] = useState(false);
@@ -88,7 +98,7 @@ export function MermaidFlowChart({ chart, renderKey, active = true }: MermaidFlo
   );
 
   return (
-    <div className="mermaid-chart-shell">
+    <div className={`mermaid-chart-shell${variant === "fullscreen" ? " is-fullscreen" : ""}`}>
       <div className="mermaid-viewport" onWheel={handleWheel}>
         <div
           className="mermaid-scroll-spacer"
@@ -130,6 +140,16 @@ export function MermaidFlowChart({ chart, renderKey, active = true }: MermaidFlo
             <button type="button" title="Reset to 100%" onClick={() => applyScale(1)}>
               1:1
             </button>
+            {onExpand && (
+              <button
+                type="button"
+                title="Enlarge in a pop-up view"
+                aria-label="Enlarge flowchart"
+                onClick={onExpand}
+              >
+                ⤢
+              </button>
+            )}
           </div>
           <span className="mermaid-zoom-label">{Math.round(scale * 100)}%</span>
           <span className="mermaid-zoom-hint">Ctrl + wheel to zoom</span>
