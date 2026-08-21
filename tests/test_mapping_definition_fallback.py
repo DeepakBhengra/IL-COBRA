@@ -45,6 +45,62 @@ def test_commented_mapping_field_returns_definition_fallback(tmp_path: Path) -> 
     assert "no COBOL SET/MOVE logic" in occ.mapping_detail
 
 
+def _write_multi_family_one_char(base: Path) -> Path:
+    mapping = base / "error_mapping_files"
+    mapping.mkdir()
+    (mapping / "CORORA_ONE_CHAR_ERROR").write_text(
+        "       10 CORORA-R-ERROR-TYPE PIC X(01).\n"
+        "           88 CORORA-R-ERROR-BACKORDER-FLAG VALUE 'B'.\n",
+        encoding="utf-8",
+    )
+    (mapping / "CORORH_ONE_CHAR_ERROR").write_text(
+        "       10 CORORH-R-ERROR-TYPE PIC X(01).\n"
+        "           88 CORORH-R-ERROR-BACKORDER-FLAG VALUE 'B'.\n",
+        encoding="utf-8",
+    )
+    return mapping
+
+
+def test_field_matched_in_two_families_reports_family_without_cobol_logic(
+    tmp_path: Path,
+) -> None:
+    # BACKORDER-FLAG is defined in both CORORA and CORORH, but only CORORA is set
+    # in COBOL. The CORORH family must still be represented (defined, not set).
+    mapping_dir = _write_multi_family_one_char(tmp_path)
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "PROG010.cob").write_text(
+        "       PROCEDURE DIVISION.\n"
+        "       0000-MAIN.\n"
+        "           SET CORORA-R-ERROR-BACKORDER-FLAG TO TRUE.\n",
+        encoding="utf-8",
+    )
+
+    programs = resolve_mapped_error_field(
+        src, "ERROR-BACKORDER-FLAG", mapping_dir_explicit=mapping_dir
+    )
+
+    fields = {o.error_field for p in programs for o in p.occurrences}
+    assert "CORORA-R-ERROR-BACKORDER-FLAG" in fields
+    assert "CORORH-R-ERROR-BACKORDER-FLAG" in fields
+
+    # CORORA is a real COBOL finding; CORORH is a mapping-definition record.
+    corora = [
+        o
+        for p in programs
+        for o in p.occurrences
+        if o.error_field == "CORORA-R-ERROR-BACKORDER-FLAG"
+    ][0]
+    cororh = [
+        o
+        for p in programs
+        for o in p.occurrences
+        if o.error_field == "CORORH-R-ERROR-BACKORDER-FLAG"
+    ][0]
+    assert "no COBOL SET/MOVE logic" not in (corora.mapping_detail or "")
+    assert "no COBOL SET/MOVE logic" in (cororh.mapping_detail or "")
+
+
 def test_active_mapping_field_with_logic_is_not_a_fallback(tmp_path: Path) -> None:
     mapping_dir = _write_mapping_dir(tmp_path)
     src = tmp_path / "src"
