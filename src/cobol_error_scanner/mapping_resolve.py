@@ -842,16 +842,35 @@ def resolve_mapped_error_field(
         out.append(ps)
 
     result = [p for p in out if p.occurrences]
-    if result:
-        return result
 
-    # The field is defined in a mapping copybook but no COBOL SET/MOVE logic sets
-    # it (e.g. a commented-out / unused 88-level). Surface the definition so the
-    # search returns an explanatory record instead of an empty result.
+    # Every mapping family that defines the queried field should be represented.
+    # For matched definitions that no COBOL SET/MOVE logic actually sets (e.g. a
+    # field defined in CORORH but only set via CORORA in code, or a commented-out
+    # 88-level), surface the definition so the family is not silently dropped.
     defs = find_mapping_definitions_matching_field(paths, q)
     if defs:
-        return _mapping_definition_fallback(defs, q)
-    return []
+        covered: set[str] = set()
+        for prog in result:
+            for o in prog.occurrences:
+                ef = (o.error_field or "").upper()
+                if ef:
+                    covered.add(ef)
+                st = (o.setting_statement or "").upper()
+                for d in defs:
+                    if d.name.upper() in st:
+                        covered.add(d.name.upper())
+        uncovered: list[MappingDefinition] = []
+        seen_names: set[str] = set()
+        for d in defs:
+            nu = d.name.upper()
+            if nu in covered or nu in seen_names:
+                continue
+            seen_names.add(nu)
+            uncovered.append(d)
+        if uncovered:
+            result = result + _mapping_definition_fallback(uncovered, q)
+
+    return result
 
 
 def apply_mapping_filter_fallback(
