@@ -252,38 +252,10 @@ export function OperationalDocsPanel({
   }, [index, outDir]);
 
   const loadDocs = useCallback(async () => {
-    // #region agent log
-    fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "980007" },
-      body: JSON.stringify({
-        sessionId: "980007",
-        hypothesisId: "C",
-        location: "OperationalDocsPanel.tsx:loadDocs:entry",
-        message: "loadDocs started",
-        data: { index },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setLoading(true);
     setError(null);
     try {
       await refreshDocs();
-      // #region agent log
-      fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "980007" },
-        body: JSON.stringify({
-          sessionId: "980007",
-          hypothesisId: "C",
-          location: "OperationalDocsPanel.tsx:loadDocs:success",
-          message: "loadDocs completed",
-          data: {},
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     } finally {
       setLoading(false);
     }
@@ -303,25 +275,6 @@ export function OperationalDocsPanel({
   }, [loadDocs]);
 
   const handleConfirm = async (comment: string) => {
-    // #region agent log
-    fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "980007" },
-      body: JSON.stringify({
-        sessionId: "980007",
-        hypothesisId: "B",
-        location: "OperationalDocsPanel.tsx:handleConfirm:entry",
-        message: "handleConfirm called",
-        data: {
-          hasPending: Boolean(pendingSelection),
-          index,
-          outDir: outDir ?? null,
-          source: pendingSelection?.source ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     if (!pendingSelection) return;
     setSaving(true);
     setError(null);
@@ -335,52 +288,10 @@ export function OperationalDocsPanel({
         },
         outDir,
       );
-      // #region agent log
-      fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "980007" },
-        body: JSON.stringify({
-          sessionId: "980007",
-          hypothesisId: "A",
-          location: "OperationalDocsPanel.tsx:handleConfirm:postOk",
-          message: "postConfirmedResolution succeeded",
-          data: {},
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       setPendingSelection(null);
       await refreshDocs();
-      // #region agent log
-      fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "980007" },
-        body: JSON.stringify({
-          sessionId: "980007",
-          hypothesisId: "C",
-          location: "OperationalDocsPanel.tsx:handleConfirm:refreshOk",
-          message: "refreshDocs after confirm completed",
-          data: {},
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to save confirmed resolution";
-      // #region agent log
-      fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "980007" },
-        body: JSON.stringify({
-          sessionId: "980007",
-          hypothesisId: "A",
-          location: "OperationalDocsPanel.tsx:handleConfirm:error",
-          message: "handleConfirm failed",
-          data: { err: message },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       setError(message);
       throw err;
     } finally {

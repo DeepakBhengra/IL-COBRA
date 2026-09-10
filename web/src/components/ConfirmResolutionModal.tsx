@@ -34,63 +34,12 @@ export function ConfirmResolutionModal({
   }
 
   const handleConfirmClick = async () => {
-    // #region agent log
-    fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "980007",
-      },
-      body: JSON.stringify({
-        sessionId: "980007",
-        hypothesisId: "B",
-        location: "ConfirmResolutionModal.tsx:confirmClick",
-        message: "Confirm button clicked",
-        data: { commentLen: comment.length, saving },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setModalError(null);
     try {
       await onConfirm(comment);
-      // #region agent log
-      fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "980007",
-        },
-        body: JSON.stringify({
-          sessionId: "980007",
-          hypothesisId: "A",
-          location: "ConfirmResolutionModal.tsx:confirmSuccess",
-          message: "onConfirm resolved",
-          data: {},
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to save confirmed resolution";
       setModalError(message);
-      // #region agent log
-      fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "980007",
-        },
-        body: JSON.stringify({
-          sessionId: "980007",
-          hypothesisId: "E",
-          location: "ConfirmResolutionModal.tsx:onConfirmRejected",
-          message: "onConfirm promise rejected",
-          data: { err: message },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     }
   };
 

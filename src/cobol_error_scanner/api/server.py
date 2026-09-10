@@ -330,35 +330,6 @@ def create_app() -> FastAPI:
         body: ConfirmedResolutionRequest,
         out_dir: str | None = None,
     ) -> dict[str, Any]:
-        # #region agent log
-        import json as _json
-        import time as _time
-
-        def _dbg(msg: str, data: dict) -> None:
-            try:
-                with open(
-                    r"C:\Legacy-Error-Code-Mapper-ver1\debug-980007.log",
-                    "a",
-                    encoding="utf-8",
-                ) as _f:
-                    _f.write(
-                        _json.dumps(
-                            {
-                                "sessionId": "980007",
-                                "hypothesisId": "D",
-                                "location": "server.py:post_confirmed_resolution",
-                                "message": msg,
-                                "data": data,
-                                "timestamp": int(_time.time() * 1000),
-                            }
-                        )
-                        + "\n"
-                    )
-            except OSError:
-                pass
-
-        _dbg("entry", {"index": index, "source": body.source})
-        # #endregion
         target = _resolve_out_dir(out_dir)
         frame = _load_frame(target)
         row = _row_to_dict(_require_finding(frame, index))
@@ -372,9 +343,6 @@ def create_app() -> FastAPI:
                 body.comment,
                 body.source,
             )
-            # #region agent log
-            _dbg("saved", {"error_code": error_code})
-            # #endregion
             return result
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc

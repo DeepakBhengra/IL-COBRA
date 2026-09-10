@@ -12,14 +12,22 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    getDefaults().then((cfg: DefaultConfig) => {
-      setClassicUiUrl(cfg.classic_ui_url);
-      setOutDir(cfg.out_dir);
-    });
+    getDefaults()
+      .then((cfg: DefaultConfig) => {
+        setClassicUiUrl(cfg.classic_ui_url);
+        setOutDir(cfg.out_dir);
+      })
+      .catch(() => {
+        // Non-fatal: falls back to defaults; config is re-fetched on demand.
+      });
   }, []);
 
   const handleScanComplete = () => {
-    getDefaults().then((cfg: DefaultConfig) => setOutDir(cfg.out_dir));
+    getDefaults()
+      .then((cfg: DefaultConfig) => setOutDir(cfg.out_dir))
+      .catch(() => {
+        // Non-fatal: keep the existing out_dir.
+      });
     setRefreshKey((k) => k + 1);
     setView("findings");
   };
