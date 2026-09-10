@@ -50,7 +50,23 @@ export class ApiError extends Error {
   }
 }
 
+const API_UNREACHABLE_MESSAGE =
+  "Cannot reach the COBOL scanner API. Open http://localhost:8000 after running " +
+  "cobol-dashboard-api from the project folder (pip install -e .). " +
+  "For development, also run: cd web && npm run dev (port 5173 proxies /api to 8000).";
+
 function formatApiError(status: number, url: string, detail: string): string {
+  // status 0 = network failure (fetch rejected); 502/503/504 = dev proxy or
+  // gateway could not reach the backend; empty 5xx body = backend not running.
+  if (
+    status === 0 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    (status >= 500 && detail.trim() === "")
+  ) {
+    return API_UNREACHABLE_MESSAGE;
+  }
   if (status === 404 && (detail === "Not Found" || detail.includes("Unknown API route"))) {
     if (url.includes("confirmed-resolution")) {
       return (
@@ -59,11 +75,7 @@ function formatApiError(status: number, url: string, detail: string): string {
         "then start with: py -m cobol_error_scanner.api.server or scripts/start-enterprise-ui.ps1"
       );
     }
-    return (
-      "Cannot reach the COBOL scanner API. Open http://localhost:8000 after running " +
-      "cobol-dashboard-api from the project folder (pip install -e .). " +
-      "For development, also run: cd web && npm run dev (port 5173 proxies /api to 8000)."
-    );
+    return API_UNREACHABLE_MESSAGE;
   }
   if (status === 404 && /finding index|finding not found/i.test(detail)) {
     return detail.includes("Close the detail panel")
@@ -75,7 +87,13 @@ function formatApiError(status: number, url: string, detail: string): string {
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch {
+    // fetch rejects (network error / connection refused) when the API is down.
+    throw new ApiError(API_UNREACHABLE_MESSAGE, 0, url);
+  }
   if (!res.ok) {
     const body = await res.text();
     let detail = body;
