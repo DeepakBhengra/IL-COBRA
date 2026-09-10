@@ -58,7 +58,18 @@ export function FindingsPage({ refreshKey, outDir, onScanComplete, onConfigureIn
   const [dataEnabled, setDataEnabled] = useState(false);
 
   useEffect(() => {
-    getDefaults().then(setDefaults);
+    let cancelled = false;
+    getDefaults()
+      .then((cfg) => {
+        if (!cancelled) setDefaults(cfg);
+      })
+      .catch(() => {
+        // Ignore here; the config is re-fetched on demand when the user searches,
+        // so a transient failure on mount does not permanently block searching.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Enable loading after a scan/ingest completes.
@@ -151,23 +162,26 @@ export function FindingsPage({ refreshKey, outDir, onScanComplete, onConfigureIn
       setError(classified.message);
       return;
     }
-    if (!defaults) {
-      setError("Scan configuration is still loading. Try again in a moment.");
-      return;
-    }
-
     setScanning(true);
     setError(null);
     setSuccess(null);
     try {
+      // Fetch the scan configuration on demand if the background load on mount
+      // failed or has not resolved yet. This surfaces the real API error (e.g.
+      // "Cannot reach the COBOL scanner API") instead of silently blocking.
+      let config = defaults;
+      if (!config) {
+        config = await getDefaults();
+        setDefaults(config);
+      }
       const result = await runScan({
-        source_root: defaults.source_root,
-        rules_path: defaults.rules_path,
-        out_dir: defaults.out_dir,
+        source_root: config.source_root,
+        rules_path: config.rules_path,
+        out_dir: config.out_dir,
         summarizer: "heuristic",
         error_code: classified.kind === "error_code" ? classified.value : "",
         error_field: classified.kind === "error_field" ? classified.value : "",
-        corora_mappings: defaults.corora_mappings,
+        corora_mappings: config.corora_mappings,
       });
       setSuccess(
         `Scanned ${result.program_count} program(s), found ${result.finding_count} finding(s). Wrote ${result.table_name}.`,

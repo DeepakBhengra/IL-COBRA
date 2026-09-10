@@ -114,6 +114,10 @@ export function ScanSettings({ onScanComplete }: ScanSettingsProps) {
 
       });
 
+    }).catch(() => {
+
+      // Non-fatal: form stays empty and the user can fill it manually.
+
     });
 
   }, []);

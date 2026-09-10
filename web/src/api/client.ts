@@ -77,22 +77,6 @@ function formatApiError(status: number, url: string, detail: string): string {
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
-    // #region agent log
-    if (url.includes("confirmed-resolution")) {
-      fetch("http://127.0.0.1:7458/ingest/379c98ef-1254-4beb-8cf0-a82e60c28273", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "980007" },
-        body: JSON.stringify({
-          sessionId: "980007",
-          hypothesisId: "A",
-          location: "client.ts:fetchJson:notOk",
-          message: "confirmed-resolution HTTP error",
-          data: { status: res.status, url },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-    }
-    // #endregion
     const body = await res.text();
     let detail = body;
     try {
