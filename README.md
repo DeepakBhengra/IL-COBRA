@@ -233,7 +233,17 @@ The dashboard shows metrics, a filterable findings table, **Finding details**, a
 
 The **Enterprise UI** is a React + Vite single-page app backed by a **FastAPI** server. It matches a light, flat enterprise table layout: tabbed findings, keyword search, filter drawer, paginated table, row detail with Mermaid flowchart, and scan settings.
 
-**Development** (two terminals):
+**Development** (one command — starts the API and the Vite dev server together):
+
+```powershell
+cd web
+npm install
+npm run dev:full
+```
+
+`npm run dev:full` launches the FastAPI backend (`python -m cobol_error_scanner.api.server`, using `.venv` when present) alongside the Vite dev server, so `/api` is reachable without a second terminal. Requires the package to be installed first (`pip install -e .`).
+
+**Development** (two terminals, if you prefer to run them separately):
 
 ```powershell
 # Terminal 1 — API on http://127.0.0.1:8000
@@ -245,7 +255,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** during development. Use **Switch to Classic UI** in the header to return to Streamlit (**http://localhost:8501** by default). Set **`CLASSIC_UI_URL`** (API / Enterprise) or **`ENTERPRISE_UI_URL`** (Streamlit) to customize those links.
+Open **http://localhost:5173** during development. If port 5173 is busy, Vite picks the next free port (e.g. 5174); the `/api` proxy still targets the backend on `COBOL_API_HOST`/`COBOL_API_PORT` (default `127.0.0.1:8000`), so the **backend must be running** or searches will show "Cannot reach the COBOL scanner API". Use **Switch to Classic UI** in the header to return to Streamlit (**http://localhost:8501** by default). Set **`CLASSIC_UI_URL`** (API / Enterprise) or **`ENTERPRISE_UI_URL`** (Streamlit) to customize those links.
 
 **Production** (single process serves the built SPA + API):
 
