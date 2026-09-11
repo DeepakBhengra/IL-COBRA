@@ -295,6 +295,7 @@ export function OrderReplayPage() {
           <label className="replay-check">
             <input
               type="checkbox"
+              name="build-order-create"
               checked={buildCreate}
               onChange={(e) => setBuildCreate(e.target.checked)}
             />
@@ -303,6 +304,7 @@ export function OrderReplayPage() {
           <label className="replay-check">
             <input
               type="checkbox"
+              name="build-order-modify"
               checked={buildModify}
               onChange={(e) => setBuildModify(e.target.checked)}
             />
@@ -317,6 +319,7 @@ export function OrderReplayPage() {
             </span>
             <input
               type="search"
+              name="customer-order-number"
               className="replay-search-input"
               placeholder="Customer order number (e.g. P28062375)"
               value={orderNumber}
@@ -342,6 +345,7 @@ export function OrderReplayPage() {
           <div className="replay-daterange-inputs">
             <input
               type="datetime-local"
+              name="range-from"
               value={fromDate}
               max={toDate}
               onChange={(e) => setFromDate(e.target.value)}
@@ -350,6 +354,7 @@ export function OrderReplayPage() {
             <span className="replay-daterange-sep">–</span>
             <input
               type="datetime-local"
+              name="range-to"
               value={toDate}
               min={fromDate}
               onChange={(e) => setToDate(e.target.value)}
