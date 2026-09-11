@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Breadcrumbs } from "./Breadcrumbs";
 
 export type AppView = "findings" | "scan";
@@ -6,25 +6,38 @@ export type AppView = "findings" | "scan";
 interface AppShellProps {
   view: AppView;
   onViewChange: (view: AppView) => void;
-  classicUiUrl: string;
   children: ReactNode;
   breadcrumbTail: string;
 }
 
-export function AppShell({
-  view,
-  onViewChange,
-  classicUiUrl,
-  children,
-  breadcrumbTail,
-}: AppShellProps) {
+function HeaderClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <span className="header-timestamp" title="Current time">
+      {now.toLocaleString(undefined, {
+        month: "numeric",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+      })}
+    </span>
+  );
+}
+
+export function AppShell({ view, onViewChange, children, breadcrumbTail }: AppShellProps) {
   return (
     <div className="app-shell">
       <nav className="app-sidebar" aria-label="Main navigation">
         <button
           type="button"
           className={`sidebar-btn${view === "findings" ? " active" : ""}`}
-          title="Findings"
+          title="Order Replay"
           onClick={() => onViewChange("findings")}
         >
           🏠
@@ -43,22 +56,12 @@ export function AppShell({
           <Breadcrumbs
             items={[
               { label: "Home", href: "#" },
-              { label: "COBOL Scanner" },
+              { label: "Error Analysis" },
               { label: breadcrumbTail },
             ]}
           />
           <div className="header-actions">
-            <span className="ui-build-id" title="Frontend bundle build time">
-              UI {typeof __APP_BUILD_ID__ !== "undefined" ? __APP_BUILD_ID__ : "dev"}
-            </span>
-            <a
-              href={classicUiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="classic-link"
-            >
-              Switch to Classic UI ↗
-            </a>
+            <HeaderClock />
           </div>
         </header>
         <main className="app-content">{children}</main>
