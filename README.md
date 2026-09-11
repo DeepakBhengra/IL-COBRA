@@ -249,13 +249,13 @@ npm run dev:full
 # Terminal 1 — API on http://127.0.0.1:8000
 cobol-dashboard-api
 
-# Terminal 2 — Vite dev server on http://localhost:5173 (proxies /api to the API)
+# Terminal 2 — Vite dev server on http://localhost:5180 (proxies /api to the API)
 cd web
 npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** during development. If port 5173 is busy, Vite picks the next free port (e.g. 5174); the `/api` proxy still targets the backend on `COBOL_API_HOST`/`COBOL_API_PORT` (default `127.0.0.1:8000`), so the **backend must be running** or searches will show "Cannot reach the COBOL scanner API". Use **Switch to Classic UI** in the header to return to Streamlit (**http://localhost:8501** by default). Set **`CLASSIC_UI_URL`** (API / Enterprise) or **`ENTERPRISE_UI_URL`** (Streamlit) to customize those links.
+Open **http://localhost:5180** during development (override the port with **`WEB_DEV_PORT`**). If the port is busy, Vite picks the next free port; the `/api` proxy still targets the backend on `COBOL_API_HOST`/`COBOL_API_PORT` (default `127.0.0.1:8000`), so the **backend must be running** or searches will show "Cannot reach the COBOL scanner API". Use **Switch to Classic UI** in the header to return to Streamlit (**http://localhost:8501** by default). Set **`CLASSIC_UI_URL`** (API / Enterprise) or **`ENTERPRISE_UI_URL`** (Streamlit) to customize those links.
 
 **Production** (single process serves the built SPA + API):
 

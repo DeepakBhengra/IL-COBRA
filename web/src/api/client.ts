@@ -53,7 +53,7 @@ export class ApiError extends Error {
 const API_UNREACHABLE_MESSAGE =
   "Cannot reach the COBOL scanner API. Open http://localhost:8000 after running " +
   "cobol-dashboard-api from the project folder (pip install -e .). " +
-  "For development, also run: cd web && npm run dev (port 5173 proxies /api to 8000).";
+  "For development, also run: cd web && npm run dev (port 5180 proxies /api to 8000).";
 
 function formatApiError(status: number, url: string, detail: string): string {
   // status 0 = network failure (fetch rejected); 502/503/504 = dev proxy or

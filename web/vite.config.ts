@@ -9,13 +9,17 @@ const apiHost = process.env.COBOL_API_HOST || "127.0.0.1";
 const apiPort = process.env.COBOL_API_PORT || "8000";
 const apiTarget = `http://${apiHost}:${apiPort}`;
 
+// Dev server port; override with WEB_DEV_PORT. Default avoids the common
+// 5173/5174 range so it does not collide with other Vite apps.
+const devPort = Number(process.env.WEB_DEV_PORT) || 5180;
+
 export default defineConfig({
   define: {
     __APP_BUILD_ID__: JSON.stringify(buildId),
   },
   plugins: [react()],
   server: {
-    port: 5173,
+    port: devPort,
     proxy: {
       "/api": {
         target: apiTarget,
