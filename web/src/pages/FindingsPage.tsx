@@ -9,6 +9,33 @@ import { Pagination } from "../components/Pagination";
 import { SearchToolbar } from "../components/SearchToolbar";
 import { TabBar } from "../components/TabBar";
 
+type MetricIconName = "findings" | "programs" | "codes" | "files";
+
+const METRIC_ICON_PATHS: Record<MetricIconName, string> = {
+  findings: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
+  programs: "M8 6l-5 6 5 6M16 6l5 6-5 6",
+  codes: "M4 9h16M4 15h16M10 3 8 21M16 3l-2 18",
+  files: "M14 3v5h5M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z",
+};
+
+function MetricIcon({ name }: { name: MetricIconName }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={METRIC_ICON_PATHS[name]} />
+    </svg>
+  );
+}
+
 const DEFAULT_FILTERS: FilterState = {
   q: "",
   programs: [],
@@ -199,22 +226,51 @@ export function FindingsPage({ refreshKey, outDir, onScanComplete, onConfigureIn
 
   return (
     <>
+      <div className="page-heading">
+        <span className="page-eyebrow">Error Analysis</span>
+        <h1 className="page-title">Error Findings</h1>
+        <p className="page-subtitle">
+          Scan COBOL programs for error-handling paths, then search, filter, and map findings to
+          operational documentation.
+        </p>
+      </div>
+
       <div className="metrics-row">
         <div className="metric-card">
-          <div className="label">Findings</div>
-          <div className="value">{metrics.findings}</div>
+          <span className="metric-icon">
+            <MetricIcon name="findings" />
+          </span>
+          <div className="metric-body">
+            <div className="label">Findings</div>
+            <div className="value">{metrics.findings}</div>
+          </div>
         </div>
         <div className="metric-card">
-          <div className="label">Programs</div>
-          <div className="value">{metrics.programs}</div>
+          <span className="metric-icon">
+            <MetricIcon name="programs" />
+          </span>
+          <div className="metric-body">
+            <div className="label">Programs</div>
+            <div className="value">{metrics.programs}</div>
+          </div>
         </div>
         <div className="metric-card">
-          <div className="label">Error codes</div>
-          <div className="value">{metrics.error_codes}</div>
+          <span className="metric-icon">
+            <MetricIcon name="codes" />
+          </span>
+          <div className="metric-body">
+            <div className="label">Error codes</div>
+            <div className="value">{metrics.error_codes}</div>
+          </div>
         </div>
         <div className="metric-card">
-          <div className="label">Source files</div>
-          <div className="value">{metrics.source_files}</div>
+          <span className="metric-icon">
+            <MetricIcon name="files" />
+          </span>
+          <div className="metric-body">
+            <div className="label">Source files</div>
+            <div className="value">{metrics.source_files}</div>
+          </div>
         </div>
       </div>
 
@@ -224,16 +280,22 @@ export function FindingsPage({ refreshKey, outDir, onScanComplete, onConfigureIn
         onChange={(tab) => updateFilter({ tab })}
       />
 
-      <SearchToolbar
-        query={filters.q}
-        onQueryChange={(q) => updateFilter({ q })}
-        onFocusedSearch={handleFocusedSearch}
-        onRefresh={handleRefresh}
-        onFilter={() => setFilterOpen(true)}
-        onExport={handleExport}
-        loading={loading}
-        scanning={scanning}
-      />
+      <section className="search-panel">
+        <h2 className="search-panel-title">Search Error Findings</h2>
+        <p className="search-panel-subtitle">
+          Enter a 2-character error code or an error field name and run a focused COBOL scan
+        </p>
+        <SearchToolbar
+          query={filters.q}
+          onQueryChange={(q) => updateFilter({ q })}
+          onFocusedSearch={handleFocusedSearch}
+          onRefresh={handleRefresh}
+          onFilter={() => setFilterOpen(true)}
+          onExport={handleExport}
+          loading={loading}
+          scanning={scanning}
+        />
+      </section>
 
       {success && <div className="alert alert-success">{success}</div>}
       {error && <div className="alert alert-error">{error}</div>}
