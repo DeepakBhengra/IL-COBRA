@@ -53,7 +53,7 @@ export function SearchToolbar({
             </button>
           )}
         </div>
-        <button type="submit" className="outline-btn" disabled={busy || !query.trim()}>
+        <button type="submit" className="search-run-btn" disabled={busy || !query.trim()}>
           {scanning ? (
             <>
               <span className="spinner" /> Scanning…
