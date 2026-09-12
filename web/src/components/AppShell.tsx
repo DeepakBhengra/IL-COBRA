@@ -6,18 +6,11 @@ export type AppView = "findings" | "scan";
 interface AppShellProps {
   view: AppView;
   onViewChange: (view: AppView) => void;
-  classicUiUrl: string;
   children: ReactNode;
   breadcrumbTail: string;
 }
 
-export function AppShell({
-  view,
-  onViewChange,
-  classicUiUrl,
-  children,
-  breadcrumbTail,
-}: AppShellProps) {
+export function AppShell({ view, onViewChange, children, breadcrumbTail }: AppShellProps) {
   return (
     <div className="app-shell">
       <nav className="app-sidebar" aria-label="Main navigation">
@@ -51,14 +44,6 @@ export function AppShell({
             <span className="ui-build-id" title="Frontend bundle build time">
               UI {typeof __APP_BUILD_ID__ !== "undefined" ? __APP_BUILD_ID__ : "dev"}
             </span>
-            <a
-              href={classicUiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="classic-link"
-            >
-              Switch to Classic UI ↗
-            </a>
           </div>
         </header>
         <main className="app-content">{children}</main>
