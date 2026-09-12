@@ -79,18 +79,6 @@
   gap: 12px;
 }
 
-.classic-link {
-  font-size: 13px;
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.classic-link:hover {
-  text-decoration: underline;
-}
-
 .app-content {
   flex: 1;
   overflow: auto;
