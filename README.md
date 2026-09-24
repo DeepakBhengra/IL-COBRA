@@ -202,6 +202,24 @@ When no operational document matches but COBOL findings exist, a **finding-level
 
 **Per-finding view in the Enterprise UI** — The Operational docs panel shows a rolled-up summary plus per-document **Historical Resolution** (excerpt from the operational doc) and **Technical Resolution** (structured COBOL fields: program, condition, statement, mapping detail, etc.).
 
+### Jira Cloud connectivity
+
+The **Operational docs** panel also includes a **Jira Cloud tickets** section. For the open finding it searches your Jira Cloud instance for tickets that mention the finding's **error code** and **error field**, then surfaces each ticket's status, resolution, and the most resolution-oriented comment ("Resolution insight"), plus a heuristic roll-up of how similar issues were resolved.
+
+Connectivity is configured entirely through **environment variables on the API server** — the Jira API token is never stored in the repo. Set these, then (re)start `cobol-dashboard-api`:
+
+| Variable | Required | Description |
+| -------- | -------- | ----------- |
+| **`JIRA_BASE_URL`** | yes | Your site, e.g. `https://your-org.atlassian.net`. |
+| **`JIRA_EMAIL`** | yes | Atlassian account email used with the API token. |
+| **`JIRA_API_TOKEN`** | yes | Atlassian API token from https://id.atlassian.com/manage-profile/security/api-tokens. |
+| **`JIRA_PROJECTS`** | no | Comma-separated project keys to scope the search (e.g. `OPS,PAY`). |
+| **`JIRA_EXTRA_JQL`** | no | Extra JQL AND-ed onto the generated query (e.g. `labels = cobol`). |
+| **`JIRA_MAX_RESULTS`** | no | Max tickets to fetch (default `10`, capped at `50`). |
+| **`JIRA_MOCK`** | no | `1` for built-in sample tickets, or a path to a JSON file of issues — useful for a no-credentials preview/demo. |
+
+Jira Cloud uses HTTP Basic auth (email as username, API token as password). Endpoints: **`GET /api/jira/status`** (reports whether it is configured, no secrets) and **`GET /api/findings/{index}/jira`** (searches for that finding). In a Cloud Agent, add the `JIRA_*` values as **Secrets** so they are injected as env vars.
+
 ### User feedback
 
 Analyst feedback is stored per error code in **`knowledge/code_field_index.json`** and influences future ingest runs and resolution text.

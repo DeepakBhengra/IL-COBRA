@@ -15,6 +15,7 @@ import type {
   IngestStatus,
   OperationalDocsResponse,
 } from "../types/operationalDocs";
+import type { JiraSearchResponse, JiraStatus } from "../types/jira";
 
 function normalizeOutDir(outDir?: string): string | undefined {
   if (!outDir?.trim()) return undefined;
@@ -183,6 +184,18 @@ export async function postConfirmedResolution(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export async function getJiraStatus(): Promise<JiraStatus> {
+  return fetchJson<JiraStatus>("/api/jira/status");
+}
+
+export async function getFindingJira(
+  index: number,
+  outDir?: string,
+): Promise<JiraSearchResponse> {
+  const qs = buildQuery({ out_dir: outDir });
+  return fetchJson<JiraSearchResponse>(`/api/findings/${index}/jira${qs}`);
 }
 
 export async function getIngestStatus(outDir?: string): Promise<IngestStatus> {
