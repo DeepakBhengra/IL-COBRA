@@ -14,6 +14,7 @@ import type {
   TechnicalResolution,
 } from "../types/operationalDocs";
 import { ConfirmResolutionModal } from "./ConfirmResolutionModal";
+import { JiraInsights } from "./JiraInsights";
 
 interface OperationalDocsPanelProps {
   index: number;
@@ -302,6 +303,8 @@ export function OperationalDocsPanel({
   const sourceLabel =
     pendingSelection?.source === "historical" ? "Historical Resolution" : "Condition";
 
+  const jiraSection = <JiraInsights index={index} outDir={outDir} />;
+
   if (loading) {
     return (
       <div className="loading-overlay">
@@ -337,6 +340,7 @@ export function OperationalDocsPanel({
       "";
     return (
       <>
+        {jiraSection}
         <div className="ops-empty-state">
           <h3>No operational documents ingested</h3>
           <p className="ops-insideline-contact">
@@ -388,6 +392,7 @@ export function OperationalDocsPanel({
     const confirmed = data.confirmed_resolution;
     return (
       <>
+        {jiraSection}
         <div className="ops-empty-state">
           <h3>No linked documents for this finding</h3>
           <p className="ops-insideline-contact">
@@ -441,6 +446,8 @@ export function OperationalDocsPanel({
   return (
     <div className="ops-docs-panel">
       {error && <p className="alert alert-error">{error}</p>}
+
+      {jiraSection}
 
       {(data.summary || data.steps.length > 0) && (
         <section className="resolution-card">

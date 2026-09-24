@@ -1637,3 +1637,274 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ------------------------------------------------------------------ */
+/* Jira Cloud insights (operational docs section)                      */
+/* ------------------------------------------------------------------ */
+
+.jira-panel {
+  border: 1px solid #dbe6fb;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 60%);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+.jira-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.jira-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jira-panel-logo {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: #0052cc;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.jira-panel-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #16233c;
+}
+
+.jira-panel-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.jira-refresh-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--primary-outline);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.jira-refresh-btn:not(:disabled):hover {
+  background: var(--primary-light);
+}
+
+.jira-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.jira-loading {
+  padding: 16px 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jira-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.jira-retry {
+  margin-left: auto;
+}
+
+.jira-hint {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.jira-hint p {
+  margin: 0 0 8px;
+}
+
+.jira-env-list {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.jira-env-list li {
+  margin-bottom: 4px;
+}
+
+.jira-hint-note {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.jira-mock-note {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.jira-empty {
+  margin: 4px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.jira-summary-card {
+  background: var(--bg);
+  border: 1px solid #e5e9f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.jira-summary-text {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #16233c;
+}
+
+.jira-insights-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.jira-insights-list li {
+  margin-bottom: 4px;
+}
+
+.jira-ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jira-ticket {
+  border: 1px solid #e5e9f0;
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 12px 14px;
+}
+
+.jira-ticket-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.jira-ticket-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.jira-key {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.jira-summary {
+  font-size: 13px;
+  color: #16233c;
+  font-weight: 600;
+}
+
+.jira-status-pill {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.jira-status-done {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jira-status-progress {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.jira-status-todo {
+  background: #e5e9f0;
+  color: #475467;
+}
+
+.jira-ticket-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.jira-meta-chip {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.jira-meta-resolved {
+  background: #eff8f1;
+  color: #166534;
+  border-color: #bbe6c8;
+}
+
+.jira-resolution-excerpt {
+  border-top: 1px solid #eef1f6;
+  padding-top: 8px;
+}
+
+.jira-excerpt-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.jira-resolution-excerpt p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}

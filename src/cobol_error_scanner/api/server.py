@@ -28,6 +28,7 @@ from cobol_error_scanner.data_access import (
     records_to_frame,
 )
 from cobol_error_scanner.document_access import get_operational_docs_for_finding, ingest_status
+from cobol_error_scanner.jira_integration import JiraConfig, search_for_finding as jira_search_for_finding
 from cobol_error_scanner.ingestion.knowledge_store import set_confirmed_resolution
 from cobol_error_scanner.flowchart_from_summary import build_mermaid, parse_jsonl_row
 from cobol_error_scanner.ingest_service import run_ingest
@@ -323,6 +324,26 @@ def create_app() -> FastAPI:
         frame = _load_frame(target)
         row = _row_to_dict(_require_finding(frame, index))
         return get_operational_docs_for_finding(row, target)
+
+    @app.get("/api/jira/status")
+    def get_jira_status() -> dict[str, Any]:
+        """Report whether Jira Cloud connectivity is configured (no secrets)."""
+        return JiraConfig.from_env().public_dict()
+
+    @app.get("/api/findings/{index}/jira")
+    def get_finding_jira(
+        index: int,
+        out_dir: str | None = None,
+        error_code: str = "",
+        error_field: str = "",
+    ) -> dict[str, Any]:
+        """Search Jira for tickets related to this finding's code/field."""
+        target = _resolve_out_dir(out_dir)
+        frame = _load_frame(target)
+        row = _row_to_dict(_require_finding(frame, index))
+        code = (error_code or str(row.get("error_code") or "")).strip()
+        field = (error_field or str(row.get("error_field") or "")).strip()
+        return jira_search_for_finding(code, field)
 
     @app.post("/api/findings/{index}/confirmed-resolution")
     def post_confirmed_resolution(
