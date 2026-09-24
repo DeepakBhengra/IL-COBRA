@@ -33,9 +33,12 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urlencode, urljoin
 
-_SEARCH_PATH = "/rest/api/3/search"
+# Atlassian removed the legacy POST /rest/api/3/search endpoint (CHANGE-2046);
+# the enhanced JQL search endpoint is used instead. Overridable for Jira
+# Server/Data Center (which still use /rest/api/2/search) via JIRA_SEARCH_PATH.
+_SEARCH_PATH = "/rest/api/3/search/jql"
 _DEFAULT_FIELDS = [
     "summary",
     "status",
@@ -81,6 +84,7 @@ class JiraConfig:
     timeout: float = 15.0
     verify_ssl: bool = True
     mock: str = ""
+    search_path: str = _SEARCH_PATH
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "JiraConfig":
@@ -109,6 +113,7 @@ class JiraConfig:
             timeout=timeout,
             verify_ssl=verify_ssl,
             mock=str(src.get("JIRA_MOCK", "")).strip(),
+            search_path=str(src.get("JIRA_SEARCH_PATH", "")).strip() or _SEARCH_PATH,
         )
 
     @property
@@ -177,6 +182,51 @@ def _post_json(config: JiraConfig, path: str, payload: dict[str, Any]) -> dict[s
         return json.loads(body)
     except json.JSONDecodeError as exc:
         raise JiraError("Jira returned a non-JSON response.") from exc
+
+
+def _get_json(config: JiraConfig, path: str, params: dict[str, str] | None = None) -> dict[str, Any]:
+    url = urljoin(config.base_url + "/", path.lstrip("/"))
+    if params:
+        url = f"{url}?{urlencode(params)}"
+    request = urllib.request.Request(url, method="GET")
+    request.add_header("Authorization", _auth_header(config))
+    request.add_header("Accept", "application/json")
+    try:
+        with urllib.request.urlopen(
+            request, timeout=config.timeout, context=_ssl_context(config)
+        ) as response:
+            body = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8")[:500]
+        except Exception:
+            pass
+        raise JiraError(f"Jira returned HTTP {exc.code} for {path}. {detail}".strip()) from exc
+    except urllib.error.URLError as exc:
+        raise JiraError(f"Could not reach Jira at {config.base_url}: {exc.reason}") from exc
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise JiraError("Jira returned a non-JSON response.") from exc
+
+
+def _fetch_comment_container(config: JiraConfig, key: str) -> dict[str, Any] | None:
+    """Fetch an issue's comment field when the search response omits it.
+
+    The enhanced JQL search endpoint does not always return comment bodies
+    inline, so we fall back to the issue endpoint. Failures are non-fatal.
+    """
+    if not key:
+        return None
+    try:
+        data = _get_json(config, f"/rest/api/3/issue/{key}", {"fields": "comment"})
+    except JiraError:
+        return None
+    fields = data.get("fields") if isinstance(data, dict) else None
+    if isinstance(fields, dict) and isinstance(fields.get("comment"), dict):
+        return fields["comment"]
+    return None
 
 
 def _escape_jql(term: str) -> str:
@@ -488,10 +538,19 @@ def search_for_finding(
         else:
             response = _post_json(
                 cfg,
-                _SEARCH_PATH,
+                cfg.search_path,
                 {"jql": jql, "maxResults": cfg.max_results, "fields": _DEFAULT_FIELDS},
             )
             raw_issues = response.get("issues") or []
+            for issue in raw_issues:
+                fields = issue.get("fields") or {}
+                comment = fields.get("comment")
+                has_comments = isinstance(comment, dict) and comment.get("comments")
+                if not has_comments:
+                    fetched = _fetch_comment_container(cfg, str(issue.get("key") or ""))
+                    if fetched is not None:
+                        fields["comment"] = fetched
+                        issue["fields"] = fields
     except JiraError as exc:
         base_payload["reachable"] = False
         base_payload["error"] = str(exc)
