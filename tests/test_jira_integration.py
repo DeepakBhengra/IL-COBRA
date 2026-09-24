@@ -8,30 +8,51 @@ import json
 import pytest
 
 from cobol_error_scanner import jira_integration as jira
-from cobol_error_scanner.jira_integration import JiraConfig, build_jql
+from cobol_error_scanner.jira_integration import JiraConfig, build_jql, derive_search_terms
 
 
-def test_build_jql_with_code_and_field():
-    jql = build_jql("EV", "ERROR-SHIP-VIA")
-    assert 'text ~ "EV"' in jql
-    assert 'text ~ "ERROR-SHIP-VIA"' in jql
+def test_derive_search_terms_strips_mapping_and_error_prefix():
+    # The documented example: SE / CORORA-R-ERR-NO-SEC-TERM-OVRD
+    terms = derive_search_terms("SE", "CORORA-R-ERR-NO-SEC-TERM-OVRD")
+    assert terms == ["ERR-NO-SEC-TERM-OVRD", "NO-SEC-TERM-OVRD"]
+
+
+def test_derive_search_terms_error_prefix_variant():
+    terms = derive_search_terms("EN", "CORORL-R-ERROR-PART-NOT-FOUND")
+    assert terms == ["ERROR-PART-NOT-FOUND", "PART-NOT-FOUND"]
+
+
+def test_derive_search_terms_without_mapping_prefix():
+    terms = derive_search_terms("EV", "ERROR-SHIP-VIA")
+    assert terms == ["ERROR-SHIP-VIA", "SHIP-VIA"]
+
+
+def test_derive_search_terms_falls_back_to_code_when_no_field():
+    assert derive_search_terms("SE", "") == ["SE"]
+    assert derive_search_terms("", "") == []
+
+
+def test_build_jql_with_terms():
+    jql = build_jql(["ERR-NO-SEC-TERM-OVRD", "NO-SEC-TERM-OVRD"])
+    assert 'text ~ "ERR-NO-SEC-TERM-OVRD"' in jql
+    assert 'text ~ "NO-SEC-TERM-OVRD"' in jql
     assert " OR " in jql
     assert jql.strip().endswith("ORDER BY updated DESC")
 
 
 def test_build_jql_with_projects_and_extra():
-    jql = build_jql("EV", "", projects=["OPS", "PAY"], extra_jql="labels = cobol")
+    jql = build_jql(["EV"], projects=["OPS", "PAY"], extra_jql="labels = cobol")
     assert 'project in ("OPS", "PAY")' in jql
     assert "(labels = cobol)" in jql
 
 
 def test_build_jql_escapes_quotes():
-    jql = build_jql('AB"C', "")
+    jql = build_jql(['AB"C'])
     assert '\\"' in jql
 
 
 def test_build_jql_empty_terms_has_fallback():
-    jql = build_jql("", "")
+    jql = build_jql([])
     assert "created >= -365d" in jql
 
 
@@ -158,7 +179,8 @@ def test_search_for_finding_live_path_with_patched_transport(monkeypatch):
     # Auth header uses HTTP Basic and the (migrated) search endpoint is correct.
     assert str(captured["auth"]).startswith("Basic ")
     assert captured["url"].endswith("/rest/api/3/search/jql")
-    assert 'text ~ "EV"' in captured["jql"]
+    # Search terms are derived from the error field (code is only a fallback).
+    assert 'text ~ "ERROR-SHIP-VIA"' in captured["jql"]
 
 
 def test_search_fetches_comments_when_search_omits_them(monkeypatch):

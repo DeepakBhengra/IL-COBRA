@@ -31,6 +31,7 @@ export interface JiraSearchResponse {
   query: {
     error_code: string;
     error_field: string;
+    terms: string[];
     jql: string;
   };
   issues: JiraIssue[];

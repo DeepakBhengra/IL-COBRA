@@ -28,6 +28,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import ssl
 import urllib.error
 import urllib.request
@@ -233,18 +234,57 @@ def _escape_jql(term: str) -> str:
     return term.replace("\\", "\\\\").replace('"', '\\"')
 
 
+# Mapping-catalog prefix on error fields, e.g. "CORORA-R-" / "CORORL-R-".
+_MAPPING_PREFIX_RE = re.compile(r"^COROR[A-Z]+-[A-Z0-9]+-", re.IGNORECASE)
+# Generic error prefix on the remaining core, e.g. "ERR-" / "ERROR-".
+_ERROR_PREFIX_RE = re.compile(r"^(ERROR|ERR)-", re.IGNORECASE)
+
+
+def derive_search_terms(error_code: str, error_field: str) -> list[str]:
+    """Derive Jira search terms from a finding's error field.
+
+    The error field carries a mapping-catalog prefix that never appears in
+    operational tickets, so it is stripped to produce meaningful search terms.
+    Example: ``CORORA-R-ERR-NO-SEC-TERM-OVRD`` ->
+    ``["ERR-NO-SEC-TERM-OVRD", "NO-SEC-TERM-OVRD"]``.
+
+    Falls back to the 2-character error code only when no field is available.
+    """
+    terms: list[str] = []
+    field = (error_field or "").strip()
+    if field:
+        core = _MAPPING_PREFIX_RE.sub("", field).strip("-").strip()
+        if core:
+            terms.append(core)
+            stripped = _ERROR_PREFIX_RE.sub("", core).strip("-").strip()
+            if stripped and stripped.upper() != core.upper():
+                terms.append(stripped)
+    if not terms:
+        code = (error_code or "").strip()
+        if code:
+            terms.append(code)
+
+    seen: set[str] = set()
+    unique: list[str] = []
+    for term in terms:
+        key = term.upper()
+        if key not in seen:
+            seen.add(key)
+            unique.append(term)
+    return unique
+
+
 def build_jql(
-    error_code: str,
-    error_field: str,
+    terms: list[str],
     *,
     projects: list[str] | None = None,
     extra_jql: str = "",
 ) -> str:
-    """Compose a JQL query that finds tickets mentioning the code/field."""
-    terms = [t.strip() for t in (error_code, error_field) if t and t.strip()]
+    """Compose a JQL query that finds tickets mentioning the given terms."""
+    clean_terms = [t.strip() for t in terms if t and t.strip()]
     clauses: list[str] = []
-    if terms:
-        text_terms = " OR ".join(f'text ~ "{_escape_jql(t)}"' for t in terms)
+    if clean_terms:
+        text_terms = " OR ".join(f'text ~ "{_escape_jql(t)}"' for t in clean_terms)
         clauses.append(f"({text_terms})")
     if projects:
         joined = ", ".join(f'"{_escape_jql(p)}"' for p in projects)
@@ -384,9 +424,9 @@ def analyze_issue(issue: dict[str, Any], base_url: str) -> dict[str, Any]:
 
 
 def _summarize(
-    issues: list[dict[str, Any]], error_code: str, error_field: str
+    issues: list[dict[str, Any]], search_terms: list[str]
 ) -> tuple[str, list[str]]:
-    terms = " / ".join(t for t in (error_code, error_field) if t) or "the finding"
+    terms = " / ".join(t for t in search_terms if t) or "the finding"
     if not issues:
         return (f"No Jira tickets mention {terms}.", [])
     resolved = [i for i in issues if i["is_resolved"]]
@@ -444,6 +484,34 @@ _BUILTIN_MOCK_ISSUES: list[dict[str, Any]] = [
         },
     },
     {
+        "key": "OPS-5099",
+        "fields": {
+            "summary": "SE edit: ERR-NO-SEC-TERM-OVRD blocks valid secondary-term overrides",
+            "status": {"name": "Done", "statusCategory": {"key": "done"}},
+            "resolution": {"name": "Fixed"},
+            "assignee": {"displayName": "Marcus Vogel"},
+            "priority": {"name": "High"},
+            "issuetype": {"name": "Bug"},
+            "labels": ["cobol", "security"],
+            "updated": "2026-03-04T11:15:00.000+0000",
+            "description": "Orders with a security term override are rejected on "
+            "ERR-NO-SEC-TERM-OVRD during the SE edit.",
+            "comment": {
+                "comments": [
+                    {
+                        "author": {"displayName": "Marcus Vogel"},
+                        "created": "2026-03-04T11:10:00.000+0000",
+                        "body": "Root cause: the NO-SEC-TERM-OVRD flag was not being "
+                        "set for pre-authorized accounts. Resolution: populate the "
+                        "override flag in 200-VALIDATE-SECURITY before the SE edit and "
+                        "skip ERR-NO-SEC-TERM-OVRD when the account is allow-listed. "
+                        "Shipped in release 26.2.0.",
+                    }
+                ]
+            },
+        },
+    },
+    {
         "key": "OPS-4655",
         "fields": {
             "summary": "Intermittent EV edit failures during peak checkout",
@@ -486,13 +554,13 @@ def _load_mock_issues(config: JiraConfig) -> list[dict[str, Any]]:
     return list(_BUILTIN_MOCK_ISSUES)
 
 
-def _mock_matches(issue: dict[str, Any], error_code: str, error_field: str) -> bool:
-    terms = [t.strip().lower() for t in (error_code, error_field) if t and t.strip()]
-    if not terms:
+def _mock_matches(issue: dict[str, Any], terms: list[str]) -> bool:
+    lowered = [t.strip().lower() for t in terms if t and t.strip()]
+    if not lowered:
         return True
     fields = issue.get("fields") or {}
     hay = json.dumps(fields).lower()
-    return any(term in hay for term in terms)
+    return any(term in hay for term in lowered)
 
 
 def search_for_finding(
@@ -503,9 +571,9 @@ def search_for_finding(
 ) -> dict[str, Any]:
     """Search Jira for tickets related to a finding and summarize resolutions."""
     cfg = config or JiraConfig.from_env()
+    terms = derive_search_terms(error_code, error_field)
     jql = build_jql(
-        error_code,
-        error_field,
+        terms,
         projects=cfg.projects,
         extra_jql=cfg.extra_jql,
     )
@@ -513,7 +581,12 @@ def search_for_finding(
         "configured": cfg.is_configured,
         "mock": cfg.is_mock,
         "base_url": cfg.base_url,
-        "query": {"error_code": error_code, "error_field": error_field, "jql": jql},
+        "query": {
+            "error_code": error_code,
+            "error_field": error_field,
+            "terms": terms,
+            "jql": jql,
+        },
         "issues": [],
         "issue_count": 0,
         "summary": "",
@@ -533,7 +606,7 @@ def search_for_finding(
             raw_issues = [
                 issue
                 for issue in _load_mock_issues(cfg)
-                if _mock_matches(issue, error_code, error_field)
+                if _mock_matches(issue, terms)
             ][: cfg.max_results]
         else:
             response = _post_json(
@@ -557,7 +630,7 @@ def search_for_finding(
         return base_payload
 
     issues = [analyze_issue(issue, cfg.base_url) for issue in raw_issues]
-    summary, insights = _summarize(issues, error_code, error_field)
+    summary, insights = _summarize(issues, terms)
     base_payload.update(
         {
             "reachable": True,

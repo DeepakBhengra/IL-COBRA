@@ -96,7 +96,12 @@ export function JiraInsights({ index, outDir }: JiraInsightsProps) {
   }, [load]);
 
   const query = data?.query;
-  const terms = query ? [query.error_code, query.error_field].filter(Boolean).join(" / ") : "";
+  const searchTerms = query?.terms?.length
+    ? query.terms
+    : query
+      ? [query.error_code, query.error_field].filter(Boolean)
+      : [];
+  const terms = searchTerms.join(", ");
 
   return (
     <section className="jira-panel">
@@ -107,7 +112,7 @@ export function JiraInsights({ index, outDir }: JiraInsightsProps) {
           </span>
           <div>
             <h3>Jira Cloud tickets</h3>
-            {terms && <p className="jira-panel-subtitle">Related to {terms}</p>}
+            {terms && <p className="jira-panel-subtitle">Searching by {terms}</p>}
           </div>
         </div>
         <button
