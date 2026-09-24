@@ -155,10 +155,67 @@ def test_search_for_finding_live_path_with_patched_transport(monkeypatch):
     assert result["issues"][0]["key"] == "OPS-9"
     assert result["issues"][0]["is_resolved"] is True
     assert "corrected the mapping" in result["issues"][0]["resolution_excerpt"]
-    # Auth header uses HTTP Basic and the search endpoint is correct.
+    # Auth header uses HTTP Basic and the (migrated) search endpoint is correct.
     assert str(captured["auth"]).startswith("Basic ")
-    assert captured["url"].endswith("/rest/api/3/search")
+    assert captured["url"].endswith("/rest/api/3/search/jql")
     assert 'text ~ "EV"' in captured["jql"]
+
+
+def test_search_fetches_comments_when_search_omits_them(monkeypatch):
+    """The enhanced JQL endpoint may omit comment bodies; verify the fallback."""
+    cfg = JiraConfig(base_url="https://acme.atlassian.net", email="a@b.c", api_token="t")
+    calls: list[str] = []
+
+    class FakeResponse(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout=None, context=None):  # noqa: ANN001
+        url = request.full_url
+        calls.append(url)
+        if "/search/jql" in url:
+            payload = {
+                "issues": [
+                    {
+                        "key": "OPS-77",
+                        "fields": {
+                            "summary": "EV failure",
+                            "status": {"name": "Done", "statusCategory": {"key": "done"}},
+                            "resolution": {"name": "Done"},
+                            # No comment field returned by the search endpoint.
+                        },
+                    }
+                ]
+            }
+        else:
+            # Issue endpoint returns the comments.
+            assert "/rest/api/3/issue/OPS-77" in url
+            payload = {
+                "fields": {
+                    "comment": {
+                        "comments": [
+                            {
+                                "author": {"displayName": "Dev"},
+                                "created": "2026-03-01T00:00:00.000+0000",
+                                "body": "Root cause fixed in the mapping table.",
+                            }
+                        ]
+                    }
+                }
+            }
+        return FakeResponse(json.dumps(payload).encode("utf-8"))
+
+    monkeypatch.setattr(jira.urllib.request, "urlopen", fake_urlopen)
+
+    result = jira.search_for_finding("EV", "", config=cfg)
+    assert result["issue_count"] == 1
+    assert "Root cause fixed" in result["issues"][0]["resolution_excerpt"]
+    # It called both the search endpoint and the per-issue comment endpoint.
+    assert any("/search/jql" in u for u in calls)
+    assert any("/rest/api/3/issue/OPS-77" in u for u in calls)
 
 
 def test_search_for_finding_http_error(monkeypatch):
