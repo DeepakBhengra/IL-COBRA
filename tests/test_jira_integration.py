@@ -32,10 +32,11 @@ def test_derive_search_terms_falls_back_to_code_when_no_field():
     assert derive_search_terms("", "") == []
 
 
-def test_build_jql_with_terms():
+def test_build_jql_with_terms_uses_exact_phrase():
     jql = build_jql(["ERR-NO-SEC-TERM-OVRD", "NO-SEC-TERM-OVRD"])
-    assert 'text ~ "ERR-NO-SEC-TERM-OVRD"' in jql
-    assert 'text ~ "NO-SEC-TERM-OVRD"' in jql
+    # Exact-phrase match: term wrapped in escaped quotes, not a bare token match.
+    assert 'text ~ "\\"ERR-NO-SEC-TERM-OVRD\\""' in jql
+    assert 'text ~ "\\"NO-SEC-TERM-OVRD\\""' in jql
     assert " OR " in jql
     assert jql.strip().endswith("ORDER BY updated DESC")
 
@@ -182,7 +183,7 @@ def test_search_for_finding_live_path_with_patched_transport(monkeypatch):
                 {
                     "key": "OPS-9",
                     "fields": {
-                        "summary": "EV edit failure",
+                        "summary": "EV / ERROR-SHIP-VIA edit failure",
                         "status": {"name": "Done", "statusCategory": {"key": "done"}},
                         "resolution": {"name": "Fixed"},
                         "comment": {
@@ -211,8 +212,10 @@ def test_search_for_finding_live_path_with_patched_transport(monkeypatch):
     # Auth header uses HTTP Basic and the (migrated) search endpoint is correct.
     assert str(captured["auth"]).startswith("Basic ")
     assert captured["url"].endswith("/rest/api/3/search/jql")
-    # Search terms are derived from the error field (code is only a fallback).
-    assert 'text ~ "ERROR-SHIP-VIA"' in captured["jql"]
+    # Search terms are derived from the error field (code is only a fallback),
+    # and matched as an exact phrase.
+    assert "ERROR-SHIP-VIA" in captured["jql"]
+    assert '\\"ERROR-SHIP-VIA\\"' in captured["jql"]
 
 
 def test_search_fetches_comments_when_search_omits_them(monkeypatch):
@@ -270,6 +273,60 @@ def test_search_fetches_comments_when_search_omits_them(monkeypatch):
     # It called both the search endpoint and the per-issue comment endpoint.
     assert any("/search/jql" in u for u in calls)
     assert any("/rest/api/3/issue/OPS-77" in u for u in calls)
+
+
+def test_search_filters_out_loose_matches_without_literal_mention(monkeypatch):
+    """Tickets returned by JQL but not literally mentioning the term are hidden."""
+    cfg = JiraConfig(base_url="https://acme.atlassian.net", email="a@b.c", api_token="t")
+
+    class FakeResponse(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout=None, context=None):  # noqa: ANN001
+        payload = {
+            "issues": [
+                {
+                    "key": "REAL-1",
+                    "fields": {
+                        "summary": "SHIP-VIA edit rejects valid carriers",
+                        "status": {"name": "Done", "statusCategory": {"key": "done"}},
+                        "resolution": {"name": "Fixed"},
+                        "comment": {
+                            "comments": [
+                                {
+                                    "author": {"displayName": "QA"},
+                                    "created": "2026-01-01T00:00:00.000+0000",
+                                    "body": "Fixed the SHIP-VIA mapping.",
+                                }
+                            ]
+                        },
+                    },
+                },
+                {
+                    "key": "LOOSE-2",
+                    "fields": {
+                        # Jira's tokenizer matched "ship"/"via" loosely; no literal term.
+                        "summary": "Increase zero-touch shipment volume",
+                        "status": {"name": "In Progress", "statusCategory": {"key": "indeterminate"}},
+                        "description": "Improve shipping throughput via automation.",
+                        "comment": {"comments": []},
+                    },
+                },
+            ]
+        }
+        return FakeResponse(json.dumps(payload).encode("utf-8"))
+
+    monkeypatch.setattr(jira.urllib.request, "urlopen", fake_urlopen)
+
+    result = jira.search_for_finding("EV", "ERROR-SHIP-VIA", config=cfg)
+    assert result["total_matched"] == 2
+    assert result["issue_count"] == 1
+    assert result["filtered_out"] == 1
+    assert [i["key"] for i in result["issues"]] == ["REAL-1"]
 
 
 def test_search_for_finding_http_error(monkeypatch):

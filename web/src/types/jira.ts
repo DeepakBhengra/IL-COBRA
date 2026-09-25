@@ -44,6 +44,8 @@ export interface JiraSearchResponse {
   };
   issues: JiraIssue[];
   issue_count: number;
+  total_matched?: number;
+  filtered_out?: number;
   summary: string;
   insights: string[];
   error?: string;

@@ -283,11 +283,16 @@ def build_jql(
     projects: list[str] | None = None,
     extra_jql: str = "",
 ) -> str:
-    """Compose a JQL query that finds tickets mentioning the given terms."""
+    """Compose a JQL query that finds tickets mentioning the given terms.
+
+    Uses exact-phrase matching (``text ~ "\\"term\\""``) so Jira does not match
+    the individual tokens loosely (e.g. "ship" or "via" on their own).
+    """
     clean_terms = [t.strip() for t in terms if t and t.strip()]
     clauses: list[str] = []
     if clean_terms:
-        text_terms = " OR ".join(f'text ~ "{_escape_jql(t)}"' for t in clean_terms)
+        # Wrap each term in escaped quotes for a phrase match, not a token match.
+        text_terms = " OR ".join(f'text ~ "\\"{_escape_jql(t)}\\""' for t in clean_terms)
         clauses.append(f"({text_terms})")
     if projects:
         joined = ", ".join(f'"{_escape_jql(p)}"' for p in projects)
@@ -489,7 +494,13 @@ def analyze_issue(
     summary = str(fields.get("summary") or "")
     comments = _extract_comments(fields)
     resolution_excerpt = _pick_resolution_excerpt(description, comments, terms)
-    mentions = _collect_mentions(description, comments, terms)
+
+    mentions: list[dict[str, str]] = []
+    if terms and summary and _terms_in_text(summary, terms):
+        summary_snippet = _mention_snippet(summary, terms)
+        if summary_snippet:
+            mentions.append({"source": "Summary", "author": "", "snippet": summary_snippet})
+    mentions.extend(_collect_mentions(description, comments, terms))
 
     combined = " ".join([summary, description] + [c.get("text", "") for c in comments])
     matched_terms = _terms_in_text(combined, terms)
@@ -682,6 +693,8 @@ def search_for_finding(
         },
         "issues": [],
         "issue_count": 0,
+        "total_matched": 0,
+        "filtered_out": 0,
         "summary": "",
         "insights": [],
     }
@@ -722,13 +735,20 @@ def search_for_finding(
         base_payload["error"] = str(exc)
         return base_payload
 
-    issues = [analyze_issue(issue, cfg.base_url, terms) for issue in raw_issues]
+    analyzed = [analyze_issue(issue, cfg.base_url, terms) for issue in raw_issues]
+    total_matched = len(analyzed)
+    # Hide loose JQL-only matches: keep tickets that literally mention a term
+    # (in summary, description, or comments). Only filter when we have terms.
+    issues = [i for i in analyzed if i["matched_terms"]] if terms else analyzed
+    filtered_out = total_matched - len(issues)
     summary, insights = _summarize(issues, terms)
     base_payload.update(
         {
             "reachable": True,
             "issues": issues,
             "issue_count": len(issues),
+            "total_matched": total_matched,
+            "filtered_out": filtered_out,
             "summary": summary,
             "insights": insights,
         }
