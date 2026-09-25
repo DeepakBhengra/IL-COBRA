@@ -222,9 +222,19 @@ export function JiraInsights({ index, outDir }: JiraInsightsProps) {
         <>
           {data.mock && <p className="jira-mock-note">Showing sample tickets (JIRA_MOCK enabled).</p>}
           {data.issue_count === 0 ? (
-            <p className="jira-empty">No related Jira tickets found for {terms || "this finding"}.</p>
+            <p className="jira-empty">
+              {data.total_matched && data.total_matched > 0
+                ? `Jira returned ${data.total_matched} ticket(s), but none literally mention ${terms || "this finding"}.`
+                : `No related Jira tickets found for ${terms || "this finding"}.`}
+            </p>
           ) : (
             <>
+              {data.filtered_out && data.filtered_out > 0 ? (
+                <p className="jira-filter-note">
+                  Showing {data.issue_count} ticket(s) that mention {terms}; hid{" "}
+                  {data.filtered_out} loose match(es) without a literal mention.
+                </p>
+              ) : null}
               {data.summary && (
                 <div className="jira-summary-card">
                   <p className="jira-summary-text">{data.summary}</p>
