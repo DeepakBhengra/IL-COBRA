@@ -1,6 +1,30 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
 import { getFindingJira } from "../api/client";
 import type { JiraIssue, JiraSearchResponse } from "../types/jira";
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Wrap every occurrence of any search term in <mark> (case-insensitive). */
+function highlightTerms(text: string, terms: string[]): ReactNode {
+  const cleaned = terms.filter((t) => t && t.trim());
+  if (!text || cleaned.length === 0) return text;
+  // Longest terms first so e.g. ERROR-TOO-MANY-LINES wins over TOO-MANY-LINES.
+  const ordered = [...cleaned].sort((a, b) => b.length - a.length);
+  const pattern = new RegExp(`(${ordered.map(escapeRegExp).join("|")})`, "gi");
+  const parts = text.split(pattern);
+  const termSet = new Set(cleaned.map((t) => t.toLowerCase()));
+  return parts.map((part, i) =>
+    part && termSet.has(part.toLowerCase()) ? (
+      <mark key={i} className="jira-mark">
+        {part}
+      </mark>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    ),
+  );
+}
 
 interface JiraInsightsProps {
   index: number;
@@ -20,7 +44,7 @@ function formatUpdated(value: string): string {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-function JiraTicketCard({ issue }: { issue: JiraIssue }) {
+function JiraTicketCard({ issue, terms }: { issue: JiraIssue; terms: string[] }) {
   return (
     <article className="jira-ticket">
       <div className="jira-ticket-header">
@@ -59,7 +83,28 @@ function JiraTicketCard({ issue }: { issue: JiraIssue }) {
       {issue.resolution_excerpt && (
         <div className="jira-resolution-excerpt">
           <span className="jira-excerpt-label">Resolution insight</span>
-          <p>{issue.resolution_excerpt}</p>
+          <p>{highlightTerms(issue.resolution_excerpt, terms)}</p>
+        </div>
+      )}
+
+      {issue.mentions && issue.mentions.length > 0 && (
+        <div className="jira-mentions">
+          <span className="jira-excerpt-label">
+            Where mentioned{terms.length > 0 ? ` (${terms.join(", ")})` : ""}
+          </span>
+          <ul className="jira-mentions-list">
+            {issue.mentions.map((mention, i) => (
+              <li key={i} className="jira-mention">
+                <span className="jira-mention-source">
+                  {mention.source}
+                  {mention.author ? ` · ${mention.author}` : ""}
+                </span>
+                <span className="jira-mention-snippet">
+                  {highlightTerms(mention.snippet, terms)}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </article>
@@ -194,7 +239,7 @@ export function JiraInsights({ index, outDir }: JiraInsightsProps) {
               )}
               <div className="jira-ticket-list">
                 {data.issues.map((issue) => (
-                  <JiraTicketCard key={issue.key} issue={issue} />
+                  <JiraTicketCard key={issue.key} issue={issue} terms={searchTerms} />
                 ))}
               </div>
             </>

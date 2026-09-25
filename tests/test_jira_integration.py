@@ -80,6 +80,38 @@ def test_analyze_issue_extracts_resolution_excerpt():
     assert analyzed["comment_count"] == 2
 
 
+def test_analyze_issue_collects_mentions_and_matched_terms():
+    issue = jira._BUILTIN_MOCK_ISSUES[0]
+    terms = ["ERROR-SHIP-VIA", "SHIP-VIA"]
+    analyzed = jira.analyze_issue(issue, "https://acme.atlassian.net", terms)
+    # The term appears in the description and a comment -> at least two mentions.
+    assert len(analyzed["mentions"]) >= 2
+    sources = {m["source"] for m in analyzed["mentions"]}
+    assert "Description" in sources
+    assert "Comment" in sources
+    for mention in analyzed["mentions"]:
+        low = mention["snippet"].lower()
+        assert any(t.lower() in low for t in terms)
+    assert "ERROR-SHIP-VIA" in analyzed["matched_terms"]
+
+
+def test_pick_resolution_excerpt_prefers_term_over_generic_comment():
+    description = "Design QA - price discrepancies referencing TOO-MANY-LINES."
+    comments = [{"author": "A", "created": "", "text": "Can you please fix this."}]
+    # Latest comment has resolution-ish language but no term; description has the term.
+    excerpt = jira._pick_resolution_excerpt(description, comments, ["TOO-MANY-LINES"])
+    assert "TOO-MANY-LINES" in excerpt
+
+
+def test_mention_snippet_windows_around_term():
+    text = "x" * 400 + " ERROR-TOO-MANY-LINES " + "y" * 400
+    snippet = jira._mention_snippet(text, ["ERROR-TOO-MANY-LINES"])
+    assert "ERROR-TOO-MANY-LINES" in snippet
+    assert snippet.startswith("… ")
+    assert snippet.endswith(" …")
+    assert len(snippet) <= jira._MAX_MENTION_LEN
+
+
 def test_search_for_finding_not_configured():
     cfg = JiraConfig()
     result = jira.search_for_finding("EV", "ERROR-SHIP-VIA", config=cfg)
