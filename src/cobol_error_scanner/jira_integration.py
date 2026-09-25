@@ -72,6 +72,9 @@ _RESOLUTION_KEYWORDS = (
 )
 
 _MAX_EXCERPT_LEN = 600
+# Windowed excerpt around a search-term occurrence, for "where mentioned".
+_MENTION_RADIUS = 140
+_MAX_MENTION_LEN = 320
 
 
 @dataclass
@@ -344,8 +347,78 @@ def _extract_comments(fields: dict[str, Any]) -> list[dict[str, str]]:
     return out
 
 
-def _pick_resolution_excerpt(description: str, comments: list[dict[str, str]]) -> str:
-    """Choose the most resolution-oriented text from comments/description."""
+def _terms_in_text(text: str, terms: list[str]) -> list[str]:
+    """Return the search terms (in order) that appear in ``text``."""
+    if not text or not terms:
+        return []
+    lowered = text.lower()
+    return [t for t in terms if t and t.lower() in lowered]
+
+
+def _mention_snippet(
+    text: str,
+    terms: list[str],
+    *,
+    radius: int = _MENTION_RADIUS,
+    max_len: int = _MAX_MENTION_LEN,
+) -> str:
+    """Return an excerpt centered on the first search-term occurrence."""
+    if not text or not terms:
+        return ""
+    lowered = text.lower()
+    first = -1
+    for term in terms:
+        if not term:
+            continue
+        idx = lowered.find(term.lower())
+        if idx != -1 and (first == -1 or idx < first):
+            first = idx
+    if first == -1:
+        return ""
+    start = max(0, first - radius)
+    end = min(len(text), first + radius)
+    snippet = text[start:end].strip()
+    if start > 0:
+        snippet = "… " + snippet
+    if end < len(text):
+        snippet = snippet + " …"
+    return snippet[:max_len]
+
+
+def _collect_mentions(
+    description: str, comments: list[dict[str, str]], terms: list[str]
+) -> list[dict[str, str]]:
+    """Snippets from description/comments where a search term is mentioned."""
+    mentions: list[dict[str, str]] = []
+    if not terms:
+        return mentions
+    if description and _terms_in_text(description, terms):
+        snippet = _mention_snippet(description, terms)
+        if snippet:
+            mentions.append({"source": "Description", "author": "", "snippet": snippet})
+    for comment in comments:
+        text = comment.get("text", "")
+        if text and _terms_in_text(text, terms):
+            snippet = _mention_snippet(text, terms)
+            if snippet:
+                mentions.append(
+                    {
+                        "source": "Comment",
+                        "author": comment.get("author", ""),
+                        "snippet": snippet,
+                    }
+                )
+    return mentions
+
+
+def _pick_resolution_excerpt(
+    description: str, comments: list[dict[str, str]], terms: list[str]
+) -> str:
+    """Choose the best excerpt: prefer text that mentions a search term.
+
+    Priority: (1) text with a search term AND resolution language,
+    (2) text with a search term, (3) resolution language, (4) latest text.
+    """
     candidates: list[str] = []
     # Prefer the latest comments (Jira returns them oldest-first).
     for comment in reversed(comments):
@@ -355,16 +428,29 @@ def _pick_resolution_excerpt(description: str, comments: list[dict[str, str]]) -
     if description.strip():
         candidates.append(description.strip())
 
-    for text in candidates:
+    def has_keyword(text: str) -> bool:
         lowered = text.lower()
-        if any(keyword in lowered for keyword in _RESOLUTION_KEYWORDS):
-            return text[:_MAX_EXCERPT_LEN]
-    # Fall back to the most recent comment, else the description.
+        return any(keyword in lowered for keyword in _RESOLUTION_KEYWORDS)
+
+    def has_term(text: str) -> bool:
+        return bool(_terms_in_text(text, terms))
+
+    for predicate in (
+        lambda t: has_term(t) and has_keyword(t),
+        has_term,
+        has_keyword,
+    ):
+        for text in candidates:
+            if predicate(text):
+                return text[:_MAX_EXCERPT_LEN]
     return (candidates[0][:_MAX_EXCERPT_LEN]) if candidates else ""
 
 
-def analyze_issue(issue: dict[str, Any], base_url: str) -> dict[str, Any]:
+def analyze_issue(
+    issue: dict[str, Any], base_url: str, search_terms: list[str] | None = None
+) -> dict[str, Any]:
     """Turn a raw Jira issue into a compact, resolution-focused record."""
+    terms = search_terms or []
     fields = issue.get("fields") or {}
     key = str(issue.get("key") or "")
 
@@ -400,20 +486,27 @@ def analyze_issue(issue: dict[str, Any], base_url: str) -> dict[str, Any]:
     description = _normalize_ws(
         _adf_to_text(description_raw) if not isinstance(description_raw, str) else description_raw
     )
+    summary = str(fields.get("summary") or "")
     comments = _extract_comments(fields)
-    resolution_excerpt = _pick_resolution_excerpt(description, comments)
+    resolution_excerpt = _pick_resolution_excerpt(description, comments, terms)
+    mentions = _collect_mentions(description, comments, terms)
+
+    combined = " ".join([summary, description] + [c.get("text", "") for c in comments])
+    matched_terms = _terms_in_text(combined, terms)
 
     is_resolved = bool(resolution) or status_category == "done"
 
     return {
         "key": key,
         "url": f"{base_url.rstrip('/')}/browse/{key}" if base_url and key else "",
-        "summary": str(fields.get("summary") or ""),
+        "summary": summary,
         "status": status,
         "status_category": status_category,
         "is_resolved": is_resolved,
         "resolution": resolution,
         "resolution_excerpt": resolution_excerpt,
+        "mentions": mentions,
+        "matched_terms": matched_terms,
         "issue_type": issue_type,
         "priority": priority,
         "assignee": assignee,
@@ -629,7 +722,7 @@ def search_for_finding(
         base_payload["error"] = str(exc)
         return base_payload
 
-    issues = [analyze_issue(issue, cfg.base_url) for issue in raw_issues]
+    issues = [analyze_issue(issue, cfg.base_url, terms) for issue in raw_issues]
     summary, insights = _summarize(issues, terms)
     base_payload.update(
         {

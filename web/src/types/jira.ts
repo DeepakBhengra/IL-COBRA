@@ -6,6 +6,12 @@ export interface JiraStatus {
   mock: boolean;
 }
 
+export interface JiraMention {
+  source: string;
+  author: string;
+  snippet: string;
+}
+
 export interface JiraIssue {
   key: string;
   url: string;
@@ -15,6 +21,8 @@ export interface JiraIssue {
   is_resolved: boolean;
   resolution: string;
   resolution_excerpt: string;
+  mentions: JiraMention[];
+  matched_terms: string[];
   issue_type: string;
   priority: string;
   assignee: string;

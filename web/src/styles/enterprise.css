@@ -1908,3 +1908,48 @@
   line-height: 1.5;
   color: var(--text);
 }
+
+.jira-mark {
+  background: #fde68a;
+  color: #7c4a03;
+  padding: 0 2px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.jira-mentions {
+  border-top: 1px solid #eef1f6;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.jira-mentions-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jira-mention {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 2px solid var(--primary-outline);
+  padding-left: 10px;
+}
+
+.jira-mention-source {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.jira-mention-snippet {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
