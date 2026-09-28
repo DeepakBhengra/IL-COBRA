@@ -14,6 +14,7 @@ import type {
   TechnicalResolution,
 } from "../types/operationalDocs";
 import { ConfirmResolutionModal } from "./ConfirmResolutionModal";
+import { DatadogInsights } from "./DatadogInsights";
 import { JiraInsights } from "./JiraInsights";
 
 interface OperationalDocsPanelProps {
@@ -304,6 +305,7 @@ export function OperationalDocsPanel({
     pendingSelection?.source === "historical" ? "Historical Resolution" : "Condition";
 
   const jiraSection = <JiraInsights index={index} outDir={outDir} />;
+  const datadogSection = <DatadogInsights index={index} outDir={outDir} />;
 
   if (loading) {
     return (
@@ -341,6 +343,7 @@ export function OperationalDocsPanel({
     return (
       <>
         {jiraSection}
+        {datadogSection}
         <div className="ops-empty-state">
           <h3>No operational documents ingested</h3>
           <p className="ops-insideline-contact">
@@ -393,6 +396,7 @@ export function OperationalDocsPanel({
     return (
       <>
         {jiraSection}
+        {datadogSection}
         <div className="ops-empty-state">
           <h3>No linked documents for this finding</h3>
           <p className="ops-insideline-contact">
@@ -448,6 +452,7 @@ export function OperationalDocsPanel({
       {error && <p className="alert alert-error">{error}</p>}
 
       {jiraSection}
+      {datadogSection}
 
       {(data.summary || data.steps.length > 0) && (
         <section className="resolution-card">

@@ -1650,6 +1650,30 @@
   margin-bottom: 20px;
 }
 
+.datadog-panel {
+  border-color: #e4d7f5;
+  background: linear-gradient(180deg, #f8f4fc 0%, #ffffff 60%);
+}
+
+.datadog-panel .jira-panel-logo {
+  background: #632ca6;
+}
+
+.datadog-status-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.datadog-status-warn {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.datadog-status-info {
+  background: #e5e9f0;
+  color: #475467;
+}
+
 .jira-panel-header {
   display: flex;
   align-items: flex-start;

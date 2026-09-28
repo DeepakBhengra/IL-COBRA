@@ -220,6 +220,25 @@ Connectivity is configured entirely through **environment variables on the API s
 
 Jira Cloud uses HTTP Basic auth (email as username, API token as password). Endpoints: **`GET /api/jira/status`** (reports whether it is configured, no secrets) and **`GET /api/findings/{index}/jira`** (searches for that finding). In a Cloud Agent, add the `JIRA_*` values as **Secrets** so they are injected as env vars.
 
+### Datadog connectivity
+
+The **Operational docs** panel also includes a **Datadog logs** section. For the open finding it searches Datadog logs for the same error-field terms used by the Jira search (mapping prefixes such as `CORORA-R-` are stripped), then shows matching messages, status, service, and host.
+
+Connectivity is configured entirely through **environment variables on the API server** — the Datadog keys are never stored in the repo. Set these, then (re)start `cobol-dashboard-api`:
+
+| Variable | Required | Description |
+| -------- | -------- | ----------- |
+| **`DATADOG_API_KEY`** | yes | Datadog API key. |
+| **`DATADOG_APP_KEY`** | yes | Datadog application key (log search requires both keys). |
+| **`DATADOG_SITE`** | no | Site token, default `datadoghq.com`. Also accepts `us3.datadoghq.com`, `us5.datadoghq.com`, `datadoghq.eu`, `ap1.datadoghq.com`, and the other Datadog sites. |
+| **`DATADOG_EXTRA_QUERY`** | no | Extra log query AND-ed onto the search (e.g. `env:prod service:order-edit`). |
+| **`DATADOG_INDEXES`** | no | Comma-separated log indexes to search. |
+| **`DATADOG_LOOKBACK`** | no | Window such as `15m`, `4h`, or `7d` (default `7d`). |
+| **`DATADOG_MAX_RESULTS`** | no | Max log events to fetch (default `10`, capped at `50`). |
+| **`DATADOG_MOCK`** | no | `1` for built-in sample logs, or a path to a JSON file of log events. |
+
+Datadog authenticates with the `DD-API-KEY` and `DD-APPLICATION-KEY` headers. Endpoints: **`GET /api/datadog/status`** (reports whether it is configured, no secrets) and **`GET /api/findings/{index}/datadog`** (searches logs for that finding). In a Cloud Agent, add the `DATADOG_*` values as **Secrets**.
+
 ### User feedback
 
 Analyst feedback is stored per error code in **`knowledge/code_field_index.json`** and influences future ingest runs and resolution text.
