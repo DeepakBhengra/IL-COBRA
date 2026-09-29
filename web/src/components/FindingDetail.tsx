@@ -4,9 +4,10 @@ import { getFinding, getFlowchart } from "../api/client";
 import type { FindingRow } from "../types/findings";
 import { MermaidFlowChart } from "./MermaidFlowChart";
 import { FlowChartModal } from "./FlowChartModal";
+import { DatadogAnalysis } from "./DatadogAnalysis";
 import { OperationalDocsPanel } from "./OperationalDocsPanel";
 
-type DetailTab = "details" | "logic" | "flow" | "operational-docs";
+type DetailTab = "details" | "logic" | "flow" | "operational-docs" | "datadog";
 
 type IconName =
   | "code"
@@ -20,7 +21,8 @@ type IconName =
   | "alert"
   | "map"
   | "copy"
-  | "check";
+  | "check"
+  | "pulse";
 
 const ICON_PATHS: Record<IconName, string> = {
   code: "M8 6l-5 6 5 6M16 6l5 6-5 6",
@@ -35,6 +37,7 @@ const ICON_PATHS: Record<IconName, string> = {
   map: "M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14",
   copy: "M9 9h10v10H9zM5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1",
   check: "M20 6 9 17l-5-5",
+  pulse: "M22 12h-4l-3 9L9 3l-3 9H2",
 };
 
 function Icon({ name, className }: { name: IconName; className?: string }) {
@@ -209,6 +212,7 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
     { id: "logic", label: "Condition & Logic", icon: "code", show: logicBlocks.length > 0 },
     { id: "flow", label: "Control Flow", icon: "flow", show: true },
     { id: "operational-docs", label: "Operational Docs", icon: "book", show: true },
+    { id: "datadog", label: "DataDog Analysis", icon: "pulse", show: true },
   ];
 
   return (
@@ -364,6 +368,14 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
                       outDir={outDir}
                       onConfigureIngest={onConfigureIngest}
                     />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "datadog" && (
+                <div className="section-card">
+                  <div className="section-card-body">
+                    <DatadogAnalysis index={index} outDir={outDir} />
                   </div>
                 </div>
               )}
