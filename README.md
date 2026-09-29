@@ -224,6 +224,8 @@ Jira Cloud uses HTTP Basic auth (email as username, API token as password). Endp
 
 `cobol_error_scanner.datadog_connection` checks a Datadog account. It is separate from the Jira ticket search. Set **`DD_ACCESS_TOKEN`** (a Datadog personal or service access token) and optionally **`DD_SITE`** (default `datadoghq.com`, for example `us5.datadoghq.com`). `connect()` sends the token as `Authorization: Bearer` and probes `GET /api/v2/logs/events`. A successful probe sets `connected` and `scope` to `logs`. A permission failure means Datadog accepted the token but it cannot read logs. When no access token is set, **`DATADOG_API_KEY`** and **`DATADOG_APP_KEY`** (or `DD_API_KEY` and `DD_APP_KEY`) are used instead: `connect()` calls the API-key validate endpoint and then the current-user endpoint. The returned status never includes the token or keys. **`DATADOG_MOCK=1`** reports a successful connection without calling Datadog.
 
+The finding detail **DataDog Analysis** tab reports OrderCreate v6 and v2 responses for that finding's error code over the last 15 days. A response is included when the error code matches, or when the request status is FAILED and the response flag matches. Counts are grouped by North America, EMEA, and other countries, by production (`uschileai1401`–`uschileai1404`) versus test hosts, and by `OrderCreate_v6*` or `OrderCreate_v2*`.
+
 ### User feedback
 
 Analyst feedback is stored per error code in **`knowledge/code_field_index.json`** and influences future ingest runs and resolution text.

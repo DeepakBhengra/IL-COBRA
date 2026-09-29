@@ -171,15 +171,23 @@ def _auth_headers(config: DatadogConfig) -> list[tuple[str, str]]:
     ]
 
 
-def _get_json(config: DatadogConfig, path: str) -> dict[str, Any]:
+def _request_json(
+    config: DatadogConfig,
+    path: str,
+    payload: dict[str, Any] | None = None,
+    timeout: float | None = None,
+) -> dict[str, Any]:
     url = config.api_base.rstrip("/") + "/" + path.lstrip("/")
-    request = urllib.request.Request(url, method="GET")
+    data = None if payload is None else json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(url, data=data, method="POST" if payload is not None else "GET")
     for name, value in _auth_headers(config):
         request.add_header(name, value)
     request.add_header("Accept", "application/json")
+    if payload is not None:
+        request.add_header("Content-Type", "application/json")
     try:
         with urllib.request.urlopen(
-            request, timeout=config.timeout, context=_ssl_context(config)
+            request, timeout=timeout if timeout is not None else config.timeout, context=_ssl_context(config)
         ) as response:
             body = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
@@ -200,6 +208,10 @@ def _get_json(config: DatadogConfig, path: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise DatadogConnectionError("Datadog returned an unexpected response.")
     return parsed
+
+
+def _get_json(config: DatadogConfig, path: str) -> dict[str, Any]:
+    return _request_json(config, path)
 
 
 def _scrub(config: DatadogConfig, text: str) -> str:

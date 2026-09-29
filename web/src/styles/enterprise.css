@@ -1959,3 +1959,162 @@
   line-height: 1.5;
   color: var(--text);
 }
+
+/* DataDog Analysis tab */
+.dd-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dd-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dd-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dd-panel-logo {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 26px;
+  border-radius: 6px;
+  background: #632ca6;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dd-panel-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #16233c;
+}
+
+.dd-panel-subtitle,
+.dd-scope,
+.dd-note,
+.dd-empty,
+.dd-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.dd-refresh-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--primary-outline);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dd-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dd-loading,
+.dd-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.dd-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.dd-metric {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f8f7fc;
+}
+
+.dd-metric-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #16233c;
+}
+
+.dd-metric-label {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.dd-table-wrap {
+  overflow-x: auto;
+}
+
+.dd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.dd-table th,
+.dd-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.dd-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.dd-count {
+  font-weight: 700;
+}
+
+.dd-env {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dd-env-production {
+  background: #e8f7ee;
+  color: #0f7a3a;
+}
+
+.dd-env-test {
+  background: #fff4e5;
+  color: #9a5b00;
+}
+
+.dd-env-unknown {
+  background: #eef1f6;
+  color: #52607a;
+}
