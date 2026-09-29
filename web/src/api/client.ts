@@ -15,7 +15,6 @@ import type {
   IngestStatus,
   OperationalDocsResponse,
 } from "../types/operationalDocs";
-import type { DatadogSearchResponse, DatadogStatus } from "../types/datadog";
 import type { JiraSearchResponse, JiraStatus } from "../types/jira";
 
 function normalizeOutDir(outDir?: string): string | undefined {
@@ -197,18 +196,6 @@ export async function getFindingJira(
 ): Promise<JiraSearchResponse> {
   const qs = buildQuery({ out_dir: outDir });
   return fetchJson<JiraSearchResponse>(`/api/findings/${index}/jira${qs}`);
-}
-
-export async function getDatadogStatus(): Promise<DatadogStatus> {
-  return fetchJson<DatadogStatus>("/api/datadog/status");
-}
-
-export async function getFindingDatadog(
-  index: number,
-  outDir?: string,
-): Promise<DatadogSearchResponse> {
-  const qs = buildQuery({ out_dir: outDir });
-  return fetchJson<DatadogSearchResponse>(`/api/findings/${index}/datadog${qs}`);
 }
 
 export async function getIngestStatus(outDir?: string): Promise<IngestStatus> {
