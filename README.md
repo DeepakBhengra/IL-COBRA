@@ -222,7 +222,7 @@ Jira Cloud uses HTTP Basic auth (email as username, API token as password). Endp
 
 ### Datadog connection
 
-`cobol_error_scanner.datadog_connection` checks a Datadog account. It is separate from the Jira ticket search. Set **`DATADOG_API_KEY`** and **`DATADOG_APP_KEY`**, and optionally **`DATADOG_SITE`** (default `datadoghq.com`). `connect()` calls Datadog's API-key validate endpoint and then the current-user endpoint to confirm the application key. The returned status never includes the keys. **`DATADOG_MOCK=1`** reports a successful connection without calling Datadog.
+`cobol_error_scanner.datadog_connection` checks a Datadog account. It is separate from the Jira ticket search. Set **`DD_ACCESS_TOKEN`** (a Datadog personal or service access token) and optionally **`DD_SITE`** (default `datadoghq.com`, for example `us5.datadoghq.com`). `connect()` sends the token as `Authorization: Bearer` and probes `GET /api/v2/logs/events`. A successful probe sets `connected` and `scope` to `logs`. A permission failure means Datadog accepted the token but it cannot read logs. When no access token is set, **`DATADOG_API_KEY`** and **`DATADOG_APP_KEY`** (or `DD_API_KEY` and `DD_APP_KEY`) are used instead: `connect()` calls the API-key validate endpoint and then the current-user endpoint. The returned status never includes the token or keys. **`DATADOG_MOCK=1`** reports a successful connection without calling Datadog.
 
 ### User feedback
 
