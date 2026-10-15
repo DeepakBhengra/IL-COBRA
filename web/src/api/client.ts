@@ -56,6 +56,11 @@ const API_UNREACHABLE_MESSAGE =
   "cobol-dashboard-api from the project folder (pip install -e .). " +
   "For development, also run: cd web && npm run dev (port 5180 proxies /api to 8000).";
 
+function isGenericNotFound(detail: string): boolean {
+  const text = detail.trim().toLowerCase().replace(/[.!]+$/, "");
+  return text === "not found" || text.includes("unknown api route");
+}
+
 function formatApiError(status: number, url: string, detail: string): string {
   // status 0 = network failure (fetch rejected); 502/503/504 = dev proxy or
   // gateway could not reach the backend; empty 5xx body = backend not running.
@@ -68,12 +73,21 @@ function formatApiError(status: number, url: string, detail: string): string {
   ) {
     return API_UNREACHABLE_MESSAGE;
   }
-  if (status === 404 && (detail === "Not Found" || detail.includes("Unknown API route"))) {
+  // Gateways and older servers say "Not found" or "Not Found" when /api/scan
+  // never reaches cobol-dashboard-api. Show that instead of the raw phrase.
+  if ((status === 404 || status === 400) && isGenericNotFound(detail)) {
     if (url.includes("confirmed-resolution")) {
       return (
         "Confirmed resolution API is missing on the server (stale install). " +
         "Stop the API on port 8000, run: pip install -e . from the project root, " +
         "then start with: py -m cobol_error_scanner.api.server or scripts/start-enterprise-ui.ps1"
+      );
+    }
+    if (url.includes("/api/scan")) {
+      return (
+        "Search could not run because the scan API was not found. " +
+        "Start cobol-dashboard-api on port 8000, then use this page from that server " +
+        "or from the Vite dev server on port 5180 (it proxies /api)."
       );
     }
     return API_UNREACHABLE_MESSAGE;
