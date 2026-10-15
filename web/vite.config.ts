@@ -27,6 +27,15 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    port: devPort,
+    proxy: {
+      "/api": {
+        target: apiTarget,
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,

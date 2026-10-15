@@ -62,6 +62,11 @@ def run_scan(
     if requested_code and len(requested_code) != 2:
         raise ValueError(f"Focused error-code scans require exactly 2 characters: {requested_code!r}")
 
+    if not source_root.is_dir():
+        raise ValueError(f"COBOL source folder not found: {source_root}")
+    if not rules_path.is_file():
+        raise ValueError(f"Rules file not found: {rules_path}")
+
     config = _summarizer_config(summarizer)
     programs = scan_root(source_root, rules_path, summarizer=config)
     table_name = "errors_table.md"
