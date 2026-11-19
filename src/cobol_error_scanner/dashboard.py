@@ -138,7 +138,7 @@ def render_scan_controls() -> tuple[Path, Path, Path]:
                 st.session_state["scan_records"] = []
                 st.session_state["scan_manifest"] = {}
                 with st.spinner("Scanning COBOL sources..."):
-                    program_count, finding_count, table_name = run_scan(
+                    program_count, finding_count, table_name, _from_saved = run_scan(
                         source_root,
                         rules_path,
                         out_dir,

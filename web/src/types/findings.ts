@@ -65,6 +65,7 @@ export interface ScanResponse {
   program_count: number;
   finding_count: number;
   table_name: string;
+  from_saved?: boolean;
 }
 
 export interface FilterState {

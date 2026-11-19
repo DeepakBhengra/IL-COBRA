@@ -85,7 +85,7 @@ def build_lookup_response(
 
     out_dir_path.mkdir(parents=True, exist_ok=True)
 
-    program_count, finding_count, _table_name = run_scan(
+    program_count, finding_count, _table_name, _from_saved = run_scan(
         source_root_path,
         rules_path_path,
         out_dir_path,

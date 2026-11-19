@@ -74,7 +74,7 @@ py -m cobol_error_scanner.cli samples -r config\error_rules.json -o out
 
 ### Filter by error code (single-code report)
 
-Only programs and rows whose **detected code** equals the given value (case-insensitive) are included. The default markdown file is **`error_table.md`** so it is not confused with the full **`errors_table.md`**.
+Only programs and rows whose **detected code** equals the given value (case-insensitive) are included. The default markdown file is **`error_table.md`** so it is not confused with the full **`errors_table.md`**. The Enterprise search saves that result under `out/saved_scans/`. The next search for the same code reloads the saved findings while every `.cob`, `.cbl`, and `.cpy` file under the source folder is unchanged. Editing, adding, or removing one of those programs runs the scan again.
 
 ```powershell
 py -m cobol_error_scanner.cli samples -r config\error_rules.json -o out -e XX
