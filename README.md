@@ -49,6 +49,84 @@ cd c:\Legacy-Error-Code-Mapper
 py -m pip install -e .
 ```
 
+## Run in the VS Code terminal
+
+Use this sequence the first time you open the repository in Visual Studio Code. You need **Python 3.10+** and **Node.js 20.19+** (or **22.12+**).
+
+1. In VS Code, choose **File → Open Folder** and select the repository root (the folder that contains `pyproject.toml`).
+2. Open the integrated terminal with **Terminal → New Terminal**. The prompt starts in that folder.
+3. Create and activate a virtual environment.
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   py -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   ```
+
+   If PowerShell blocks the activate script, run this once in that same terminal, then run the activate command again:
+
+   ```powershell
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   ```
+
+   **macOS or Linux:**
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+4. Install the scanner and the document extras. The prompt should show `(.venv)`.
+
+   ```bash
+   python -m pip install -e ".[documents]"
+   ```
+
+5. Install the Enterprise UI. `--legacy-peer-deps` is required because this app uses Vite 8 with the React plugin.
+
+   ```bash
+   cd web
+   npm install --legacy-peer-deps
+   cd ..
+   ```
+
+6. Start the API. Leave this terminal running. It listens on **http://127.0.0.1:8000**.
+
+   ```bash
+   python -m cobol_error_scanner.api.server
+   ```
+
+7. Start the Enterprise UI in a second terminal. In VS Code, click the split-terminal icon, or use **Terminal → New Terminal**. Activate `.venv` in that terminal as well if you will run Python there, then:
+
+   ```bash
+   cd web
+   npm run dev
+   ```
+
+8. Open **http://localhost:5180**. In **Search Error Findings**, type a 2-character code such as `EV` and press **Search**. The first terminal must still show the API running. A search that cannot reach it reports that the scan API was not found.
+
+Stop either process with **Ctrl+C** in its terminal.
+
+**One terminal instead of two.** After steps 1–5, from `web`:
+
+```bash
+cd web
+npm run dev:full
+```
+
+That starts the API on port **8000** and the Vite dev server on port **5180** together. Stop both with **Ctrl+C**.
+
+**Classic UI (optional).** In another terminal, with `.venv` activated and the working directory at the repository root:
+
+```bash
+cobol-dashboard
+```
+
+Open **http://localhost:8504**.
+
+**Optional settings.** Copy `.env.example` to `.env` in the repository root before starting the API when you need the external lookup keys or `OPENAI_API_KEY`. Values already set in the terminal take precedence over `.env`.
+
 ## Usage
 
 Entry points (after **`pip install -e .`**): **`cobol-scan`**, **`cobol-ingest`**, **`cobol-dashboard`**, **`cobol-dashboard-api`**, **`cobol-flowchart`**, or **`py -m cobol_error_scanner.cli`** for the scanner only.
@@ -251,29 +329,7 @@ The dashboard shows metrics, a filterable findings table, **Finding details**, a
 
 The **Enterprise UI** is a React + Vite single-page app backed by a **FastAPI** server. It matches a light, flat enterprise table layout: tabbed findings, keyword search, filter drawer, paginated table, row detail with Mermaid flowchart, and scan settings.
 
-**Development** (one command — starts the API and the Vite dev server together):
-
-```powershell
-cd web
-npm install
-npm run dev:full
-```
-
-`npm run dev:full` launches the FastAPI backend (`python -m cobol_error_scanner.api.server`, using `.venv` when present) alongside the Vite dev server, so `/api` is reachable without a second terminal. Requires the package to be installed first (`pip install -e .`).
-
-**Development** (two terminals, if you prefer to run them separately):
-
-```powershell
-# Terminal 1 — API on http://127.0.0.1:8000
-cobol-dashboard-api
-
-# Terminal 2 — Vite dev server on http://localhost:5180 (proxies /api to the API)
-cd web
-npm install
-npm run dev
-```
-
-Open **http://localhost:5180** during development (override the port with **`WEB_DEV_PORT`**). If the port is busy, Vite picks the next free port; the `/api` proxy still targets the backend on `COBOL_API_HOST`/`COBOL_API_PORT` (default `127.0.0.1:8000`), so the **backend must be running** or searches will show "Cannot reach the COBOL scanner API". Use **Switch to Classic UI** in the header to return to Streamlit (**http://localhost:8501** by default). Set **`CLASSIC_UI_URL`** (API / Enterprise) or **`ENTERPRISE_UI_URL`** (Streamlit) to customize those links.
+Day-to-day startup from the VS Code terminal is in **[Run in the VS Code terminal](#run-in-the-vs-code-terminal)**. `npm run dev:full` (from `web`) starts the API and Vite together. Two terminals run `python -m cobol_error_scanner.api.server` and `npm run dev` separately. Open **http://localhost:5180** (override the port with **`WEB_DEV_PORT`**). The `/api` proxy targets `COBOL_API_HOST` / `COBOL_API_PORT` (default `127.0.0.1:8000`), so the API process must be running. **Switch to Classic UI** opens Streamlit at **http://localhost:8504**. Set **`CLASSIC_UI_URL`** or **`ENTERPRISE_UI_URL`** to change those links.
 
 **Production** (single process serves the built SPA + API):
 
