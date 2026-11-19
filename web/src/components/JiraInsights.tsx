@@ -1,6 +1,9 @@
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
 import { getFindingJira } from "../api/client";
 import type { JiraIssue, JiraSearchResponse } from "../types/jira";
+import { readSessionCache, writeSessionCache } from "../utils/sessionCache";
+
+const JIRA_CACHE = "jira-insights";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -112,32 +115,40 @@ function JiraTicketCard({ issue, terms }: { issue: JiraIssue; terms: string[] })
 }
 
 export function JiraInsights({ index, outDir }: JiraInsightsProps) {
-  const [data, setData] = useState<JiraSearchResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `${index}|${outDir ?? ""}`;
+  const cached = readSessionCache<JiraSearchResponse>(JIRA_CACHE, cacheKey);
+  const [data, setData] = useState<JiraSearchResponse | null>(cached ?? null);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getFindingJira(index, outDir);
-      setData(res);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reach the Jira endpoint");
-    } finally {
-      setLoading(false);
-    }
-  }, [index, outDir]);
+  const load = useCallback(
+    async (force = false) => {
+      if (!force) {
+        const stored = readSessionCache<JiraSearchResponse>(JIRA_CACHE, cacheKey);
+        if (stored) {
+          setData(stored);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await getFindingJira(index, outDir);
+        writeSessionCache(JIRA_CACHE, cacheKey, res);
+        setData(res);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to reach the Jira endpoint");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [cacheKey, index, outDir],
+  );
 
   useEffect(() => {
-    let cancelled = false;
-    load().catch(() => {
-      /* handled in load */
-    });
-    return () => {
-      cancelled = true;
-      void cancelled;
-    };
+    void load(false);
   }, [load]);
 
   const query = data?.query;
@@ -163,7 +174,7 @@ export function JiraInsights({ index, outDir }: JiraInsightsProps) {
         <button
           type="button"
           className="jira-refresh-btn"
-          onClick={() => void load()}
+          onClick={() => void load(true)}
           disabled={loading}
         >
           {loading ? <span className="spinner" /> : "↻"} Search Jira
@@ -179,7 +190,7 @@ export function JiraInsights({ index, outDir }: JiraInsightsProps) {
       {!loading && error && (
         <div className="alert alert-error jira-alert">
           {error}
-          <button type="button" className="link-button jira-retry" onClick={() => void load()}>
+          <button type="button" className="link-button jira-retry" onClick={() => void load(true)}>
             Retry
           </button>
         </div>
@@ -212,7 +223,7 @@ export function JiraInsights({ index, outDir }: JiraInsightsProps) {
       {!loading && !error && data && data.configured && data.reachable === false && (
         <div className="alert alert-error jira-alert">
           {data.error || "Could not reach Jira."}
-          <button type="button" className="link-button jira-retry" onClick={() => void load()}>
+          <button type="button" className="link-button jira-retry" onClick={() => void load(true)}>
             Retry
           </button>
         </div>

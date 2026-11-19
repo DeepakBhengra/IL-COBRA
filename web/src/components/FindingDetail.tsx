@@ -90,10 +90,18 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
   const [payloadSelection, setPayloadSelection] = useState<{ host: string; service: string } | null>(
     null,
   );
+  const [seenTabs, setSeenTabs] = useState<DetailTab[]>([]);
+
+  const openTab = (tab: DetailTab) => {
+    setActiveTab(tab);
+    setSeenTabs((current) => (current.includes(tab) ? current : [...current, tab]));
+  };
 
   useEffect(() => {
     setChartExpanded(false);
     setCopied(false);
+    setSeenTabs([]);
+    setPayloadSelection(null);
   }, [index]);
 
   useEffect(() => {
@@ -293,7 +301,7 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
                       role="tab"
                       aria-selected={activeTab === t.id}
                       className={`detail-tab${activeTab === t.id ? " active" : ""}`}
-                      onClick={() => setActiveTab(t.id)}
+                      onClick={() => openTab(t.id)}
                     >
                       <Icon name={t.icon} />
                       {t.label}
@@ -365,8 +373,8 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
                 </div>
               )}
 
-              {activeTab === "operational-docs" && (
-                <div className="section-card">
+              {seenTabs.includes("operational-docs") && (
+                <div className="section-card" hidden={activeTab !== "operational-docs"}>
                   <div className="section-card-body">
                     <OperationalDocsPanel
                       index={index}
@@ -377,23 +385,23 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
                 </div>
               )}
 
-              {activeTab === "datadog" && (
-                <div className="section-card">
+              {seenTabs.includes("datadog") && (
+                <div className="section-card" hidden={activeTab !== "datadog"}>
                   <div className="section-card-body">
                     <DatadogAnalysis
                       index={index}
                       outDir={outDir}
                       onOpenResponses={(group) => {
                         setPayloadSelection({ host: group.host, service: group.service });
-                        setActiveTab("payloads");
+                        openTab("payloads");
                       }}
                     />
                   </div>
                 </div>
               )}
 
-              {activeTab === "payloads" && (
-                <div className="section-card">
+              {seenTabs.includes("payloads") && (
+                <div className="section-card" hidden={activeTab !== "payloads"}>
                   <div className="section-card-body">
                     <DatadogPayloads
                       index={index}
