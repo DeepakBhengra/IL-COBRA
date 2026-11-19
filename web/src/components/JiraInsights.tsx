@@ -32,6 +32,8 @@ function highlightTerms(text: string, terms: string[]): ReactNode {
 interface JiraInsightsProps {
   index: number;
   outDir?: string;
+  errorCode?: string;
+  errorField?: string;
 }
 
 function statusClass(category: string): string {
@@ -114,8 +116,8 @@ function JiraTicketCard({ issue, terms }: { issue: JiraIssue; terms: string[] })
   );
 }
 
-export function JiraInsights({ index, outDir }: JiraInsightsProps) {
-  const cacheKey = `${index}|${outDir ?? ""}`;
+export function JiraInsights({ index, outDir, errorCode = "", errorField = "" }: JiraInsightsProps) {
+  const cacheKey = `${index}|${outDir ?? ""}|${errorCode}|${errorField}`;
   const cached = readSessionCache<JiraSearchResponse>(JIRA_CACHE, cacheKey);
   const [data, setData] = useState<JiraSearchResponse | null>(cached ?? null);
   const [loading, setLoading] = useState(!cached);
@@ -132,6 +134,7 @@ export function JiraInsights({ index, outDir }: JiraInsightsProps) {
           return;
         }
       }
+      setData(null);
       setLoading(true);
       setError(null);
       try {

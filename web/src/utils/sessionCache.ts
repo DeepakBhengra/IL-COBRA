@@ -13,3 +13,7 @@ export function writeSessionCache<T>(bucket: string, key: string, value: T): voi
   }
   store.set(key, value);
 }
+
+export function clearSessionCache(): void {
+  buckets.clear();
+}
