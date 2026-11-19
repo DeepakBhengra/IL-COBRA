@@ -202,6 +202,7 @@ def event_matches(message: str, error_code: str) -> bool:
         _xml_values(text, "ErrorCode")
         + _xml_values(text, "returnCode")
         + _xml_values(text, "lineErrorCode")
+        + _xml_values(text, "statuscode")
         + _json_values(text, "errorcode")
     )
     flags = _upper_set(_xml_values(text, "ResponseFlag"))
@@ -213,6 +214,7 @@ def event_matches(message: str, error_code: str) -> bool:
     statuses = _upper_set(
         _xml_values(text, "requestStatus")
         + _xml_values(text, "HeaderResponse")
+        + _xml_values(text, "responsestatus")
         + _json_values(text, "responsestatus")
         + _json_values(text, "requeststatus")
     )
@@ -387,6 +389,88 @@ def extract_exchange(message: str) -> dict[str, Any]:
     }
 
 
+def customer_po_numbers(payload: Any) -> list[str]:
+    """Customer PO numbers carried on an Order Create request or response."""
+    names = {
+        "customerponumber",
+        "customerordernumber",
+        "endcustomerordernumber",
+    }
+    found: list[str] = []
+
+    def add(value: str) -> None:
+        text = " ".join(value.split())
+        if len(text) >= 4 and text not in found:
+            found.append(text)
+
+    def walk(value: Any, key: str = "") -> None:
+        if isinstance(value, dict):
+            for child_key, child in value.items():
+                walk(child, str(child_key))
+            return
+        if isinstance(value, list):
+            for child in value:
+                walk(child, key)
+            return
+        if not isinstance(value, str):
+            return
+        if key.lower().replace("_", "") in names:
+            add(value)
+        if "<" in value or "customerOrderNumber" in value or "customerponumber" in value:
+            for match in re.findall(
+                r"<(?:\w+:)?(?:customerponumber|customerOrderNumber|endCustomerOrderNumber)>([^<]+)<",
+                value,
+                flags=re.IGNORECASE,
+            ):
+                add(match)
+            for match in re.findall(
+                r'"(?:customerponumber|customerOrderNumber|endCustomerOrderNumber)"\s*:\s*"([^"]+)"',
+                value,
+                flags=re.IGNORECASE,
+            ):
+                add(match)
+
+    walk(payload)
+    return found
+
+
+def _po_query_token(po: str) -> str:
+    text = po.strip()
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{3,40}", text):
+        return text
+    return ""
+
+
+def attach_requests_by_customer_po(
+    exchanges: list[dict[str, Any]],
+    request_events: list[dict[str, Any]],
+) -> None:
+    """Fill a missing request from a log that contains the response's customer PO."""
+    requests_by_po: dict[str, list[tuple[str, Any]]] = {}
+    for event in request_events:
+        parsed = extract_exchange(str((event.get("attributes") or {}).get("message") or ""))
+        if parsed["request"] is None:
+            continue
+        facts = _event_facts(event)
+        family = service_family(facts["service"])
+        for po in customer_po_numbers(parsed["request"]):
+            requests_by_po.setdefault(po.upper(), []).append((family, parsed["request"]))
+    for row in exchanges:
+        if row.get("request") is not None:
+            continue
+        pos = customer_po_numbers(row.get("response"))
+        if pos:
+            row["customer_po"] = pos[0]
+        for po in pos:
+            choices = requests_by_po.get(po.upper()) or []
+            if not choices:
+                continue
+            same_family = [request for family, request in choices if family == row.get("service")]
+            row["request"] = (same_family or [choices[0][1]])[0]
+            row["request_matched_by"] = "customer_po"
+            break
+
+
 def build_exchanges(events: list[dict[str, Any]], error_code: str) -> list[dict[str, Any]]:
     """Pair each matching failure response with the request that shares its correlation id."""
     rows: list[dict[str, Any]] = []
@@ -411,6 +495,8 @@ def build_exchanges(events: list[dict[str, Any]], error_code: str) -> list[dict[
                 "region": classify_region(facts["country"]),
                 "country": facts["country"],
                 "correlation_id": parsed["correlation_id"],
+                "customer_po": "",
+                "request_matched_by": "correlation_id" if parsed["request"] is not None else "",
                 "timestamp": str(attributes.get("timestamp") or ""),
                 "request": parsed["request"],
                 "response": parsed["response"],
@@ -422,6 +508,11 @@ def build_exchanges(events: list[dict[str, Any]], error_code: str) -> list[dict[
         correlation_id = row["correlation_id"]
         if row["request"] is None and correlation_id in requests_by_id:
             row["request"] = requests_by_id[correlation_id]
+            row["request_matched_by"] = "correlation_id"
+        if not row["customer_po"]:
+            pos = customer_po_numbers(row.get("response"))
+            if pos:
+                row["customer_po"] = pos[0]
     return rows
 
 
@@ -751,6 +842,29 @@ def failure_exchanges(
         for row in exchanges:
             if row["request"] is None and row["correlation_id"] in requests_by_id:
                 row["request"] = requests_by_id[row["correlation_id"]]
+                row["request_matched_by"] = "correlation_id"
+
+    missing_pos = []
+    for row in exchanges:
+        if row.get("request") is not None:
+            continue
+        for po in customer_po_numbers(row.get("response")):
+            token = _po_query_token(po)
+            if token and token not in missing_pos:
+                missing_pos.append(token)
+    if missing_pos:
+        po_query = " OR ".join(f'"{item}"' for item in missing_pos[:_MAX_EXCHANGES])
+        service_scope = "service:(OrderCreate_v6* OR OrderCreate_v2*)"
+        if service.strip() == "OrderCreate_v6*":
+            service_scope = "service:OrderCreate_v6*"
+        elif service.strip() == "OrderCreate_v2*":
+            service_scope = "service:OrderCreate_v2*"
+        po_search = f"{service_scope} Request ({po_query})"
+        try:
+            po_events, _ = _search_events(cfg, po_search, days, sort="-timestamp", max_pages=1)
+        except DatadogConnectionError:
+            po_events = []
+        attach_requests_by_customer_po(exchanges, po_events)
 
     report["exchanges"] = _select_exchanges(exchanges, host=host, service=service)
     report["truncated"] = truncated
