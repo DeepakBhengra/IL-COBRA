@@ -156,3 +156,101 @@ def test_analyze_searches_logs_and_hides_token(monkeypatch):
     assert report["groups"][0]["region"] == "EMEA"
     assert report["groups"][0]["host"] == "uschileai1401"
     assert "ddpat_secret" not in json.dumps(report)
+
+
+def test_extract_exchange_pairs_request_and_response_json():
+    request = json.dumps({"order": {"shipVia": "XC"}})
+    response = json.dumps(
+        {"serviceresponse": {"responsepreamble": {"responsestatus": "FAILED", "errorcode": "ER"}}}
+    )
+    response_only = (
+        "<pfx5:CorrelationId>corr-1</pfx5:CorrelationId>"
+        "<pfx5:CountryCode>US</pfx5:CountryCode>"
+        "<pfx5:LogDescription>OMP Response</pfx5:LogDescription>"
+        f"<pfx5:ResponseLogPayload>{response}</pfx5:ResponseLogPayload>"
+        '{"serviceresponse":{"responsepreamble":{"responsestatus":"FAILED","errorcode":"ER"}}}'
+    )
+    request_only = (
+        "<pfx5:CorrelationId>corr-1</pfx5:CorrelationId>"
+        "<pfx5:LogDescription>OrderCreate Request</pfx5:LogDescription>"
+        f"<pfx5:RequestLogPayload>{request}</pfx5:RequestLogPayload>"
+    )
+    events = [
+        {
+            "attributes": {
+                "host": "uschileai1401",
+                "service": "OrderCreate_v6_1",
+                "tags": ["env:production"],
+                "timestamp": "2026-09-28T22:05:39Z",
+                "message": response_only,
+            }
+        },
+        {
+            "attributes": {
+                "host": "uschileai1401",
+                "service": "OrderCreate_v6_1",
+                "tags": ["env:production"],
+                "message": request_only,
+            }
+        },
+    ]
+    rows = analysis.build_exchanges(events, "ER")
+    assert len(rows) == 1
+    assert rows[0]["service"] == "OrderCreate_v6*"
+    assert rows[0]["correlation_id"] == "corr-1"
+    assert rows[0]["request"] == {"order": {"shipVia": "XC"}}
+    assert rows[0]["response"]["serviceresponse"]["responsepreamble"]["errorcode"] == "ER"
+
+
+def test_failure_exchanges_mock_redacts_token_and_keeps_order_fields():
+    report = analysis.failure_exchanges("EV", DatadogConfig(mock="1", site="us5.datadoghq.com"))
+    assert report["connected"] is True
+    assert len(report["exchanges"]) == 1
+    exchange = report["exchanges"][0]
+    assert exchange["service"] == "OrderCreate_v6*"
+    assert exchange["request"]["serviceRequest"]["order"]["orderType"] == "STOCK"
+    dumped = json.dumps(report)
+    assert "should-not-leak" not in dumped
+    assert "[redacted]" in dumped
+
+
+def test_failure_exchanges_keeps_only_the_selected_host_and_service():
+    matched = analysis.failure_exchanges(
+        "EV",
+        DatadogConfig(mock="1"),
+        host="uschileai1401",
+        service="OrderCreate_v6*",
+    )
+    assert len(matched["exchanges"]) == 1
+    assert matched["exchanges"][0]["host"] == "uschileai1401"
+    other = analysis.failure_exchanges(
+        "EV",
+        DatadogConfig(mock="1"),
+        host="uschileai1402",
+        service="OrderCreate_v2*",
+    )
+    assert other["exchanges"] == []
+
+
+def test_failure_exchanges_checks_connection_before_search(monkeypatch):
+    calls: list[str] = []
+
+    def fake_connect(config):  # noqa: ANN001
+        calls.append("connect")
+        return {"connected": False, "error": "Datadog accepted the access token, but it cannot read logs."}
+
+    def fake_search(*args, **kwargs):  # noqa: ANN002
+        calls.append("search")
+        return [], False
+
+    monkeypatch.setattr(analysis, "connect", fake_connect)
+    monkeypatch.setattr(analysis, "_search_events", fake_search)
+    report = analysis.failure_exchanges(
+        "ER",
+        DatadogConfig(access_token="ddpat_secret", site="us5.datadoghq.com"),
+    )
+    assert calls == ["connect"]
+    assert report["connected"] is False
+    assert report["exchanges"] == []
+    assert "cannot read logs" in report["error"]
+    assert "ddpat_secret" not in json.dumps(report)

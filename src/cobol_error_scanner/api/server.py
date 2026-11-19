@@ -28,7 +28,7 @@ from cobol_error_scanner.data_access import (
     records_to_frame,
 )
 from cobol_error_scanner.document_access import get_operational_docs_for_finding, ingest_status
-from cobol_error_scanner.datadog_analysis import analyze_order_create
+from cobol_error_scanner.datadog_analysis import analyze_order_create, failure_exchanges
 from cobol_error_scanner.jira_integration import JiraConfig, search_for_finding as jira_search_for_finding
 from cobol_error_scanner.ingestion.knowledge_store import set_confirmed_resolution
 from cobol_error_scanner.flowchart_from_summary import build_mermaid, parse_jsonl_row
@@ -354,6 +354,20 @@ def create_app() -> FastAPI:
         row = _row_to_dict(_require_finding(frame, index))
         code = str(row.get("error_code") or "").strip()
         return analyze_order_create(code)
+
+    @app.get("/api/findings/{index}/datadog-payloads")
+    def get_finding_datadog_payloads(
+        index: int,
+        out_dir: str | None = None,
+        host: str = "",
+        service: str = "",
+    ) -> dict[str, Any]:
+        """Request and response JSON for one Order Create host and service."""
+        target = _resolve_out_dir(out_dir)
+        frame = _load_frame(target)
+        row = _row_to_dict(_require_finding(frame, index))
+        code = str(row.get("error_code") or "").strip()
+        return failure_exchanges(code, host=host, service=service)
 
     @app.post("/api/findings/{index}/confirmed-resolution")
     def post_confirmed_resolution(

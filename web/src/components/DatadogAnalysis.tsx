@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { getDatadogAnalysis } from "../api/client";
-import type { DatadogAnalysisReport } from "../types/datadog";
+import type { DatadogAnalysisGroup, DatadogAnalysisReport } from "../types/datadog";
 
 interface DatadogAnalysisProps {
   index: number;
   outDir?: string;
+  onOpenResponses?: (group: DatadogAnalysisGroup) => void;
 }
 
 function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
-export function DatadogAnalysis({ index, outDir }: DatadogAnalysisProps) {
+export function DatadogAnalysis({ index, outDir, onOpenResponses }: DatadogAnalysisProps) {
   const [data, setData] = useState<DatadogAnalysisReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +115,8 @@ export function DatadogAnalysis({ index, outDir }: DatadogAnalysisProps) {
               No Order Create v2 or v6 responses in the last {data.window_days} days matched {code}.
             </p>
           ) : (
+            <>
+            <p className="dd-scope">Click a response count to open that host and service on the Request / Response tab.</p>
             <div className="dd-table-wrap">
               <table className="dd-table">
                 <thead>
@@ -149,12 +152,22 @@ export function DatadogAnalysis({ index, outDir }: DatadogAnalysisProps) {
                           ? group.countries.map((item) => `${item.code} ${formatCount(item.count)}`).join(", ")
                           : "—"}
                       </td>
-                      <td className="dd-count">{formatCount(group.count)}</td>
+                      <td className="dd-count">
+                        <button
+                          type="button"
+                          className="dd-count-btn"
+                          onClick={() => onOpenResponses?.(group)}
+                          disabled={!onOpenResponses || group.count === 0}
+                        >
+                          {formatCount(group.count)}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </>
       )}

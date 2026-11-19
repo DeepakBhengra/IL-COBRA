@@ -28,6 +28,35 @@ export interface DatadogAnalysisSummary {
   order_create_v2: number;
 }
 
+export interface DatadogExchange {
+  service: string;
+  service_name: string;
+  host: string;
+  environment: string;
+  region: string;
+  country: string;
+  correlation_id: string;
+  timestamp: string;
+  request: unknown;
+  response: unknown;
+}
+
+export interface DatadogPayloadReport {
+  configured: boolean;
+  connected: boolean;
+  site?: string;
+  api_host?: string;
+  auth?: string;
+  mock?: boolean;
+  error_code: string;
+  window_days: number;
+  host?: string;
+  service?: string;
+  exchanges: DatadogExchange[];
+  truncated?: boolean;
+  error?: string;
+}
+
 export interface DatadogAnalysisReport {
   configured: boolean;
   site?: string;

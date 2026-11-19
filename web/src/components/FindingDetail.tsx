@@ -5,9 +5,10 @@ import type { FindingRow } from "../types/findings";
 import { MermaidFlowChart } from "./MermaidFlowChart";
 import { FlowChartModal } from "./FlowChartModal";
 import { DatadogAnalysis } from "./DatadogAnalysis";
+import { DatadogPayloads } from "./DatadogPayloads";
 import { OperationalDocsPanel } from "./OperationalDocsPanel";
 
-type DetailTab = "details" | "logic" | "flow" | "operational-docs" | "datadog";
+type DetailTab = "details" | "logic" | "flow" | "operational-docs" | "datadog" | "payloads";
 
 type IconName =
   | "code"
@@ -86,6 +87,9 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
   const [chartExpanded, setChartExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [payloadSelection, setPayloadSelection] = useState<{ host: string; service: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     setChartExpanded(false);
@@ -213,6 +217,7 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
     { id: "flow", label: "Control Flow", icon: "flow", show: true },
     { id: "operational-docs", label: "Operational Docs", icon: "book", show: true },
     { id: "datadog", label: "DataDog Analysis", icon: "pulse", show: true },
+    { id: "payloads", label: "Request / Response", icon: "code", show: true },
   ];
 
   return (
@@ -375,7 +380,27 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
               {activeTab === "datadog" && (
                 <div className="section-card">
                   <div className="section-card-body">
-                    <DatadogAnalysis index={index} outDir={outDir} />
+                    <DatadogAnalysis
+                      index={index}
+                      outDir={outDir}
+                      onOpenResponses={(group) => {
+                        setPayloadSelection({ host: group.host, service: group.service });
+                        setActiveTab("payloads");
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "payloads" && (
+                <div className="section-card">
+                  <div className="section-card-body">
+                    <DatadogPayloads
+                      index={index}
+                      outDir={outDir}
+                      host={payloadSelection?.host}
+                      service={payloadSelection?.service}
+                    />
                   </div>
                 </div>
               )}

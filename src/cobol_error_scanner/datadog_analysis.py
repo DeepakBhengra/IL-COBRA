@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html
 import http.client
+import json
 import re
 import time
 from collections import Counter
@@ -21,11 +22,15 @@ from cobol_error_scanner.datadog_connection import (
     DatadogHTTPError,
     _request_json,
     _scrub,
+    connect,
 )
 
 WINDOW_DAYS = 15
 _PAGE_LIMIT = 100
 _MAX_PAGES = 5
+_MAX_EXCHANGES = 12
+_SECRET_KEY = re.compile(r"password|secret|token|authorization|api[-_]?key|cardnumber", re.I)
+_CORRELATION_RE = re.compile(r"^[A-Za-z0-9._:-]{4,80}$")
 _SEARCH_PATH = "/api/v2/logs/events/search"
 _CODE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,40}$")
 _PROD_HOSTS = {f"uschileai140{n}" for n in range(1, 5)}
@@ -320,17 +325,125 @@ def summarize_events(events: list[dict[str, Any]], error_code: str) -> dict[str,
     }
 
 
-def _search_events(config: DatadogConfig, query: str, days: int) -> tuple[list[dict[str, Any]], bool]:
+def _redact_payload(value: Any) -> Any:
+    """Drop credential-like fields. Order business fields stay in the payload."""
+    if isinstance(value, dict):
+        cleaned: dict[str, Any] = {}
+        for key, item in value.items():
+            if _SECRET_KEY.search(str(key)):
+                cleaned[str(key)] = "[redacted]"
+            else:
+                cleaned[str(key)] = _redact_payload(item)
+        return cleaned
+    if isinstance(value, list):
+        return [_redact_payload(item) for item in value[:200]]
+    if isinstance(value, str) and len(value) > 4000:
+        return value[:4000] + "…"
+    return value
+
+
+def _decode_embedded(raw: str) -> Any:
+    text = html.unescape(html.unescape(raw or "")).strip()
+    if not text:
+        return None
+    candidates = [text]
+    start = text.find("{")
+    end = text.rfind("}")
+    if 0 <= start < end:
+        candidates.append(text[start : end + 1])
+    for candidate in candidates:
+        if not candidate or candidate[0] not in "{[":
+            continue
+        try:
+            return _redact_payload(json.loads(candidate))
+        except json.JSONDecodeError:
+            continue
+    return {"raw": text[:4000]}
+
+
+def _xml_block(text: str, name: str) -> str:
+    match = re.search(
+        rf"<(?:\w+:)?{re.escape(name)}>(.*?)</(?:\w+:)?{re.escape(name)}>",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    return match.group(1).strip() if match else ""
+
+
+def extract_exchange(message: str) -> dict[str, Any]:
+    """Pull the request and response documents out of one Order Create log."""
+    text = html.unescape(html.unescape(message or ""))
+    correlation = next((value for value in _xml_values(text, "CorrelationId") if value), "")
+    request_raw = _xml_block(text, "RequestLogPayload")
+    response_raw = _xml_block(text, "ResponseLogPayload")
+    request = _decode_embedded(request_raw) if request_raw else None
+    response = _decode_embedded(response_raw) if response_raw else None
+    if response is None and "{" in text and "response" in text.lower():
+        response = _decode_embedded(text)
+    return {
+        "correlation_id": correlation,
+        "request": request,
+        "response": response,
+    }
+
+
+def build_exchanges(events: list[dict[str, Any]], error_code: str) -> list[dict[str, Any]]:
+    """Pair each matching failure response with the request that shares its correlation id."""
+    rows: list[dict[str, Any]] = []
+    requests_by_id: dict[str, Any] = {}
+    for event in events:
+        parsed = extract_exchange(str((event.get("attributes") or {}).get("message") or ""))
+        if parsed["correlation_id"] and parsed["request"] is not None:
+            requests_by_id.setdefault(parsed["correlation_id"], parsed["request"])
+        facts = _event_facts(event)
+        family = service_family(facts["service"])
+        if family not in {"OrderCreate_v6*", "OrderCreate_v2*"}:
+            continue
+        if not event_matches(facts["message"], error_code):
+            continue
+        attributes = event.get("attributes") or {}
+        rows.append(
+            {
+                "service": family,
+                "service_name": facts["service"],
+                "host": facts["host"],
+                "environment": classify_environment(facts["host"], facts["env"]),
+                "region": classify_region(facts["country"]),
+                "country": facts["country"],
+                "correlation_id": parsed["correlation_id"],
+                "timestamp": str(attributes.get("timestamp") or ""),
+                "request": parsed["request"],
+                "response": parsed["response"],
+            }
+        )
+        if len(rows) >= _MAX_EXCHANGES:
+            break
+    for row in rows:
+        correlation_id = row["correlation_id"]
+        if row["request"] is None and correlation_id in requests_by_id:
+            row["request"] = requests_by_id[correlation_id]
+    return rows
+
+
+def _search_events(
+    config: DatadogConfig,
+    query: str,
+    days: int,
+    *,
+    sort: str = "timestamp",
+    max_pages: int | None = None,
+) -> tuple[list[dict[str, Any]], bool]:
     events: list[dict[str, Any]] = []
     cursor = None
     truncated = False
-    for page_index in range(_MAX_PAGES):
+    page_limit = _MAX_PAGES if max_pages is None else max(1, max_pages)
+    for page_index in range(page_limit):
         page: dict[str, Any] = {"limit": _PAGE_LIMIT}
         if cursor:
             page["cursor"] = cursor
         payload = {
             "filter": {"query": query, "from": f"now-{days}d", "to": "now"},
-            "sort": "timestamp",
+            "sort": sort,
             "page": page,
         }
         body = _search_with_retry(config, payload)
@@ -341,7 +454,7 @@ def _search_events(config: DatadogConfig, query: str, days: int) -> tuple[list[d
         cursor = str(((body.get("meta") or {}).get("page") or {}).get("after") or "")
         if not cursor or len(batch) < _PAGE_LIMIT:
             return events, False
-        if page_index == _MAX_PAGES - 1:
+        if page_index == page_limit - 1:
             truncated = True
     return events, truncated
 
@@ -465,5 +578,180 @@ def analyze_order_create(
     summary = summarize_events(events, code)
     report.update(summary)
     report["scanned"] = len(events)
+    report["truncated"] = truncated
+    return report
+
+
+def _mock_exchange_message() -> str:
+    request = json.dumps(
+        {
+            "serviceRequest": {
+                "requestPreamble": {"customerNumber": "10001", "countryCode": "US"},
+                "order": {"orderType": "STOCK"},
+            }
+        }
+    )
+    response = json.dumps(
+        {
+            "serviceresponse": {
+                "responsepreamble": {
+                    "responsestatus": "FAILED",
+                    "errorcode": "EV",
+                    "token": "should-not-leak",
+                }
+            }
+        }
+    )
+    return (
+        "<pfx5:CorrelationId>corr-ev-1</pfx5:CorrelationId>"
+        "<pfx5:CountryCode>US</pfx5:CountryCode>"
+        "<pfx5:ServiceName>OrderCreate_v6_0</pfx5:ServiceName>"
+        "<pfx5:LogDescription>OMP Response</pfx5:LogDescription>"
+        f"<pfx5:RequestLogPayload>{request}</pfx5:RequestLogPayload>"
+        f"<pfx5:ResponseLogPayload>{response}</pfx5:ResponseLogPayload>"
+    )
+
+
+def _empty_exchange_report(cfg: DatadogConfig, code: str, days: int) -> dict[str, Any]:
+    return {
+        **cfg.public_dict(),
+        "connected": False,
+        "error_code": code,
+        "window_days": days,
+        "exchanges": [],
+    }
+
+
+def _scoped_query(query: str, *, host: str = "", service: str = "") -> str:
+    """Narrow a log query to one host and Order Create service family."""
+    parts: list[str] = []
+    host_name = host.strip()
+    if host_name and re.fullmatch(r"[A-Za-z0-9._-]{1,80}", host_name):
+        parts.append(f"host:{host_name}")
+    if service.strip() == "OrderCreate_v6*":
+        parts.append("service:OrderCreate_v6*")
+    elif service.strip() == "OrderCreate_v2*":
+        parts.append("service:OrderCreate_v2*")
+    if not parts:
+        return query
+    return " ".join(parts) + " " + query
+
+
+def _select_exchanges(
+    exchanges: list[dict[str, Any]],
+    *,
+    host: str = "",
+    service: str = "",
+) -> list[dict[str, Any]]:
+    host_name = host.strip().lower()
+    service_name = service.strip()
+    selected: list[dict[str, Any]] = []
+    for row in exchanges:
+        if host_name and str(row.get("host") or "").lower() != host_name:
+            continue
+        row_service = str(row.get("service") or "")
+        row_name = str(row.get("service_name") or "")
+        if service_name and service_name not in {row_service, row_name}:
+            continue
+        selected.append(row)
+    return selected
+
+
+def failure_exchanges(
+    error_code: str,
+    config: DatadogConfig | None = None,
+    days: int = WINDOW_DAYS,
+    *,
+    host: str = "",
+    service: str = "",
+) -> dict[str, Any]:
+    """Return request/response JSON for Order Create services that failed this code.
+
+    Checks the Datadog connection before searching logs. Each item is one failure
+    response plus the request that shares its correlation id, when that request
+    is present in the same search window.
+    """
+    cfg = config or DatadogConfig.from_env()
+    code = (error_code or "").strip()
+    report = _empty_exchange_report(cfg, code, days)
+    report["host"] = host.strip()
+    report["service"] = service.strip()
+    if not cfg.is_configured:
+        report["error"] = (
+            "Datadog is not configured. Set DD_ACCESS_TOKEN, or "
+            "DATADOG_API_KEY and DATADOG_APP_KEY."
+        )
+        return report
+    if not code:
+        report["error"] = "This finding has no error code to search for."
+        return report
+    if not _CODE_RE.fullmatch(code):
+        report["error"] = "This error code cannot be used in a Datadog log query."
+        return report
+
+    if cfg.is_mock:
+        event = {
+            "attributes": {
+                "timestamp": "2026-09-28T22:05:39Z",
+                "host": "uschileai1401",
+                "service": "OrderCreate_v6_1",
+                "tags": ["env:production"],
+                "message": _mock_exchange_message(),
+            }
+        }
+        report["connected"] = True
+        report["exchanges"] = _select_exchanges(
+            build_exchanges([event], code), host=host, service=service
+        )
+        return report
+
+    try:
+        status = connect(cfg)
+    except DatadogConnectionError as exc:
+        report["error"] = _scrub(cfg, str(exc))
+        return report
+    if not status.get("connected"):
+        report["error"] = str(status.get("error") or "Datadog is not connected.")
+        return report
+    report["connected"] = True
+
+    try:
+        events, truncated = _search_events(
+            cfg,
+            _scoped_query(build_log_query(code), host=host, service=service),
+            days,
+            sort="-timestamp",
+            max_pages=1,
+        )
+    except DatadogConnectionError as exc:
+        report["error"] = _scrub(cfg, str(exc))
+        report["connected"] = False
+        return report
+
+    exchanges = build_exchanges(events, code)
+    missing = [
+        row["correlation_id"]
+        for row in exchanges
+        if row["request"] is None and _CORRELATION_RE.fullmatch(row["correlation_id"] or "")
+    ]
+    if missing:
+        id_query = " OR ".join(f'"<CorrelationId>{item}"' for item in missing[:_MAX_EXCHANGES])
+        request_query = f"service:(OrderCreate_v6* OR OrderCreate_v2*) Request ({id_query})"
+        try:
+            request_events, _ = _search_events(
+                cfg, request_query, days, sort="-timestamp", max_pages=1
+            )
+        except DatadogConnectionError:
+            request_events = []
+        requests_by_id: dict[str, Any] = {}
+        for event in request_events:
+            parsed = extract_exchange(str((event.get("attributes") or {}).get("message") or ""))
+            if parsed["correlation_id"] and parsed["request"] is not None:
+                requests_by_id[parsed["correlation_id"]] = parsed["request"]
+        for row in exchanges:
+            if row["request"] is None and row["correlation_id"] in requests_by_id:
+                row["request"] = requests_by_id[row["correlation_id"]]
+
+    report["exchanges"] = _select_exchanges(exchanges, host=host, service=service)
     report["truncated"] = truncated
     return report
