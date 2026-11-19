@@ -85,6 +85,7 @@ class ScanResponse(BaseModel):
     program_count: int
     finding_count: int
     table_name: str
+    from_saved: bool = False
 
 
 class IngestRequest(BaseModel):
@@ -457,7 +458,7 @@ def create_app() -> FastAPI:
         out_path = Path(body.out_dir)
         _set_out_dir(out_path)
         try:
-            program_count, finding_count, table_name = run_scan(
+            result = run_scan(
                 Path(body.source_root),
                 Path(body.rules_path),
                 out_path,
@@ -471,9 +472,10 @@ def create_app() -> FastAPI:
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return ScanResponse(
-            program_count=program_count,
-            finding_count=finding_count,
-            table_name=table_name,
+            program_count=result.program_count,
+            finding_count=result.finding_count,
+            table_name=result.table_name,
+            from_saved=result.from_saved,
         )
 
     @app.post("/api/v1/lookup", response_model=LookupResponse)

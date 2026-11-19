@@ -156,7 +156,9 @@ export function ScanSettings({ onScanComplete }: ScanSettingsProps) {
 
         type: "success",
 
-        text: `Scanned ${result.program_count} program(s), found ${result.finding_count} finding(s). Wrote ${result.table_name}.`,
+        text: result.from_saved
+          ? `Loaded ${result.program_count} program(s), ${result.finding_count} finding(s) from saved results. COBOL sources are unchanged.`
+          : `Scanned ${result.program_count} program(s), found ${result.finding_count} finding(s). Wrote ${result.table_name}.`,
 
       });
 

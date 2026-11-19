@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import NamedTuple
 
 from cobol_error_scanner.docgen import build_manifest, write_jsonl, write_manifest_json, write_markdown_table
 from cobol_error_scanner.mapping_catalog import MAX_ERROR_FIELD_INPUT_LEN, resolve_mapping_directory
@@ -16,6 +17,7 @@ from cobol_error_scanner.paths import (
     REPO_ROOT,
 )
 from cobol_error_scanner.pipeline import filter_programs_by_error_code, scan_root
+from cobol_error_scanner.scan_cache import restore_saved_scan, save_scan_result
 from cobol_error_scanner.llm_client import LLM_PROVIDERS
 from cobol_error_scanner.summarizer import SummarizerConfig
 
@@ -31,6 +33,13 @@ def _summarizer_config(provider: str) -> SummarizerConfig:
     return SummarizerConfig(provider=provider)
 
 
+class ScanResult(NamedTuple):
+    program_count: int
+    finding_count: int
+    table_name: str
+    from_saved: bool = False
+
+
 def run_scan(
     source_root: Path,
     rules_path: Path,
@@ -40,8 +49,27 @@ def run_scan(
     error_code: str = "",
     error_field: str = "",
     corora_mappings: Path | None = None,
-) -> tuple[int, int, str]:
+) -> ScanResult:
     ef = error_field.strip()[:MAX_ERROR_FIELD_INPUT_LEN]
+    requested_code = "" if ef else error_code.strip().upper()
+    if requested_code and len(requested_code) != 2:
+        raise ValueError(f"Focused error-code scans require exactly 2 characters: {requested_code!r}")
+
+    saved = restore_saved_scan(
+        source_root=source_root,
+        out_dir=out_dir,
+        error_code=requested_code,
+        error_field=ef,
+        summarizer=summarizer,
+    )
+    if saved is not None:
+        return ScanResult(
+            int(saved["program_count"]),
+            int(saved["finding_count"]),
+            str(saved["table_name"]),
+            True,
+        )
+
     if ef:
         config = _summarizer_config(summarizer)
         programs = resolve_mapped_error_field(
@@ -56,11 +84,18 @@ def run_scan(
         write_manifest_json(manifest, out_dir / "manifest.json")
         write_markdown_table(manifest, out_dir / table_name)
         finding_count = sum(len(program.occurrences) for program in programs)
-        return len(programs), finding_count, table_name
-
-    requested_code = error_code.strip().upper()
-    if requested_code and len(requested_code) != 2:
-        raise ValueError(f"Focused error-code scans require exactly 2 characters: {requested_code!r}")
+        result = ScanResult(len(programs), finding_count, table_name, False)
+        save_scan_result(
+            source_root=source_root,
+            out_dir=out_dir,
+            error_code="",
+            error_field=ef,
+            summarizer=summarizer,
+            program_count=result.program_count,
+            finding_count=result.finding_count,
+            table_name=result.table_name,
+        )
+        return result
 
     config = _summarizer_config(summarizer)
     programs = scan_root(source_root, rules_path, summarizer=config)
@@ -85,7 +120,18 @@ def run_scan(
     write_manifest_json(manifest, out_dir / "manifest.json")
     write_markdown_table(manifest, out_dir / table_name)
     finding_count = sum(len(program.occurrences) for program in programs)
-    return len(programs), finding_count, table_name
+    result = ScanResult(len(programs), finding_count, table_name, False)
+    save_scan_result(
+        source_root=source_root,
+        out_dir=out_dir,
+        error_code=requested_code,
+        error_field="",
+        summarizer=summarizer,
+        program_count=result.program_count,
+        finding_count=result.finding_count,
+        table_name=result.table_name,
+    )
+    return result
 
 
 def default_config() -> dict[str, str]:
