@@ -36,6 +36,8 @@ export interface DatadogExchange {
   region: string;
   country: string;
   correlation_id: string;
+  customer_po?: string;
+  request_matched_by?: string;
   timestamp: string;
   request: unknown;
   response: unknown;

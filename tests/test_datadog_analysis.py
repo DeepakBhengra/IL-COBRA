@@ -202,6 +202,49 @@ def test_extract_exchange_pairs_request_and_response_json():
     assert rows[0]["response"]["serviceresponse"]["responsepreamble"]["errorcode"] == "ER"
 
 
+def test_customer_po_from_response_finds_v6_request():
+    response_xml = (
+        "<pfx5:CorrelationId>1</pfx5:CorrelationId>"
+        "<pfx5:CountryCode>US</pfx5:CountryCode>"
+        "<pfx5:LogDescription>OMP Response</pfx5:LogDescription>"
+        "<pfx5:ResponseLogPayload>"
+        "<serviceresponse><responsepreamble><responsestatus>FAILED</responsestatus>"
+        "<statuscode>EV</statuscode></responsepreamble>"
+        "<ordersummary><customerponumber>PO-TEST1001</customerponumber></ordersummary>"
+        "</serviceresponse></pfx5:ResponseLogPayload>"
+    )
+    request_json = json.dumps({"customerOrderNumber": "PO-TEST1001", "orderType": "STOCK"})
+    request_xml = (
+        "<pfx5:CorrelationId>other-id</pfx5:CorrelationId>"
+        "<pfx5:ServiceName>OrderCreate_v6_0</pfx5:ServiceName>"
+        "<pfx5:LogDescription>V6 starter request</pfx5:LogDescription>"
+        f"<pfx5:RequestLogPayload>{request_json}</pfx5:RequestLogPayload>"
+    )
+    response_event = {
+        "attributes": {
+            "host": "uschileai1401",
+            "service": "OrderCreate_v6_1",
+            "tags": ["env:production"],
+            "message": response_xml,
+        }
+    }
+    request_event = {
+        "attributes": {
+            "host": "uschileai1401",
+            "service": "OrderCreate_v6_1",
+            "tags": ["env:production"],
+            "message": request_xml,
+        }
+    }
+    rows = analysis.build_exchanges([response_event], "EV")
+    assert rows[0]["request"] is None
+    assert rows[0]["customer_po"] == "PO-TEST1001"
+    analysis.attach_requests_by_customer_po(rows, [request_event])
+    assert rows[0]["request_matched_by"] == "customer_po"
+    assert rows[0]["request"]["customerOrderNumber"] == "PO-TEST1001"
+    assert rows[0]["request"]["orderType"] == "STOCK"
+
+
 def test_failure_exchanges_mock_redacts_token_and_keeps_order_fields():
     report = analysis.failure_exchanges("EV", DatadogConfig(mock="1", site="us5.datadoghq.com"))
     assert report["connected"] is True

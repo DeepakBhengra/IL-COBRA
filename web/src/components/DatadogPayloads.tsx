@@ -42,7 +42,10 @@ function ExchangeCard({ item }: { item: DatadogExchange }) {
         <span>{item.host}</span>
         {item.country && <span>{item.country}</span>}
         {item.region && <span>{item.region}</span>}
-        {item.correlation_id && <span className="dd-correlation">Correlation {item.correlation_id}</span>}
+        {item.correlation_id && (
+          <span className="dd-correlation">Correlation {item.correlation_id}</span>
+        )}
+        {item.customer_po && <span>Customer PO {item.customer_po}</span>}
       </header>
       <div className="dd-exchange-grid">
         <div>
@@ -50,7 +53,11 @@ function ExchangeCard({ item }: { item: DatadogExchange }) {
           {requestText ? (
             <pre className="dd-json">{requestText}</pre>
           ) : (
-            <p className="dd-empty">No request log was found for this correlation id.</p>
+            <p className="dd-empty">
+              {item.customer_po
+                ? `No Order Create request log contained customer PO ${item.customer_po}.`
+                : "No request log was found for this correlation id."}
+            </p>
           )}
         </div>
         <div>
