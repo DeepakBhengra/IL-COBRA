@@ -15,6 +15,14 @@ import type {
 } from "../types/operationalDocs";
 import { ConfirmResolutionModal } from "./ConfirmResolutionModal";
 import { JiraInsights } from "./JiraInsights";
+import { readSessionCache, writeSessionCache } from "../utils/sessionCache";
+
+const OPS_CACHE = "operational-docs";
+
+type OpsCacheEntry = {
+  docs: OperationalDocsResponse;
+  status: IngestStatus | null;
+};
 
 interface OperationalDocsPanelProps {
   index: number;
@@ -234,9 +242,11 @@ export function OperationalDocsPanel({
   outDir,
   onConfigureIngest,
 }: OperationalDocsPanelProps) {
-  const [data, setData] = useState<OperationalDocsResponse | null>(null);
-  const [status, setStatus] = useState<IngestStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `${index}|${outDir ?? ""}`;
+  const cached = readSessionCache<OpsCacheEntry>(OPS_CACHE, cacheKey);
+  const [data, setData] = useState<OperationalDocsResponse | null>(cached?.docs ?? null);
+  const [status, setStatus] = useState<IngestStatus | null>(cached?.status ?? null);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [saving, setSaving] = useState(false);
@@ -249,10 +259,21 @@ export function OperationalDocsPanel({
     ]);
     setData(docs);
     setStatus(ingestStatus);
+    writeSessionCache(OPS_CACHE, cacheKey, { docs, status: ingestStatus });
     return docs;
-  }, [index, outDir]);
+  }, [cacheKey, index, outDir]);
 
-  const loadDocs = useCallback(async () => {
+  const loadDocs = useCallback(async (force = false) => {
+    if (!force) {
+      const stored = readSessionCache<OpsCacheEntry>(OPS_CACHE, cacheKey);
+      if (stored) {
+        setData(stored.docs);
+        setStatus(stored.status);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+    }
     setLoading(true);
     setError(null);
     try {
@@ -260,11 +281,11 @@ export function OperationalDocsPanel({
     } finally {
       setLoading(false);
     }
-  }, [refreshDocs]);
+  }, [cacheKey, refreshDocs]);
 
   useEffect(() => {
     let cancelled = false;
-    loadDocs().catch((err: Error) => {
+    loadDocs(false).catch((err: Error) => {
       if (!cancelled) {
         setError(err.message);
         setLoading(false);

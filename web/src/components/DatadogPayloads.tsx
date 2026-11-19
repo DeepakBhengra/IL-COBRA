@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { getDatadogPayloads } from "../api/client";
 import type { DatadogExchange, DatadogPayloadReport } from "../types/datadog";
+import { readSessionCache, writeSessionCache } from "../utils/sessionCache";
+
+const PAYLOAD_CACHE = "datadog-payloads";
+
+function payloadKey(index: number, outDir: string | undefined, host?: string, service?: string): string {
+  return `${index}|${outDir ?? ""}|${host ?? ""}|${service ?? ""}`;
+}
 
 interface DatadogPayloadsProps {
   index: number;
@@ -51,24 +58,40 @@ function ExchangeCard({ item }: { item: DatadogExchange }) {
 }
 
 export function DatadogPayloads({ index, outDir, host, service }: DatadogPayloadsProps) {
-  const [data, setData] = useState<DatadogPayloadReport | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = payloadKey(index, outDir, host, service);
+  const cached = readSessionCache<DatadogPayloadReport>(PAYLOAD_CACHE, cacheKey);
+  const [data, setData] = useState<DatadogPayloadReport | null>(cached ?? null);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await getDatadogPayloads(index, outDir, { host, service }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reach Datadog");
-    } finally {
-      setLoading(false);
-    }
-  }, [index, outDir, host, service]);
+  const load = useCallback(
+    async (force = false) => {
+      if (!force) {
+        const stored = readSessionCache<DatadogPayloadReport>(PAYLOAD_CACHE, cacheKey);
+        if (stored) {
+          setData(stored);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const report = await getDatadogPayloads(index, outDir, { host, service });
+        writeSessionCache(PAYLOAD_CACHE, cacheKey, report);
+        setData(report);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to reach Datadog");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [cacheKey, index, outDir, host, service],
+  );
 
   useEffect(() => {
-    void load();
+    void load(false);
   }, [load]);
 
   const code = data?.error_code || "";
@@ -89,7 +112,7 @@ export function DatadogPayloads({ index, outDir, host, service }: DatadogPayload
             </p>
           </div>
         </div>
-        <button type="button" className="dd-refresh-btn" onClick={() => void load()} disabled={loading}>
+        <button type="button" className="dd-refresh-btn" onClick={() => void load(true)} disabled={loading}>
           {loading ? <span className="spinner" /> : "↻"} Load payloads
         </button>
       </div>
@@ -108,7 +131,7 @@ export function DatadogPayloads({ index, outDir, host, service }: DatadogPayload
       {!loading && error && (
         <div className="alert alert-error">
           {error}
-          <button type="button" className="link-button" onClick={() => void load()}>
+          <button type="button" className="link-button" onClick={() => void load(true)}>
             Retry
           </button>
         </div>

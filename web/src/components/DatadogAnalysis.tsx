@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { getDatadogAnalysis } from "../api/client";
 import type { DatadogAnalysisGroup, DatadogAnalysisReport } from "../types/datadog";
+import { readSessionCache, writeSessionCache } from "../utils/sessionCache";
+
+const ANALYSIS_CACHE = "datadog-analysis";
+
+function analysisKey(index: number, outDir?: string): string {
+  return `${index}|${outDir ?? ""}`;
+}
 
 interface DatadogAnalysisProps {
   index: number;
@@ -13,24 +20,40 @@ function formatCount(value: number): string {
 }
 
 export function DatadogAnalysis({ index, outDir, onOpenResponses }: DatadogAnalysisProps) {
-  const [data, setData] = useState<DatadogAnalysisReport | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = analysisKey(index, outDir);
+  const cached = readSessionCache<DatadogAnalysisReport>(ANALYSIS_CACHE, cacheKey);
+  const [data, setData] = useState<DatadogAnalysisReport | null>(cached ?? null);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await getDatadogAnalysis(index, outDir));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reach Datadog");
-    } finally {
-      setLoading(false);
-    }
-  }, [index, outDir]);
+  const load = useCallback(
+    async (force = false) => {
+      if (!force) {
+        const stored = readSessionCache<DatadogAnalysisReport>(ANALYSIS_CACHE, cacheKey);
+        if (stored) {
+          setData(stored);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const report = await getDatadogAnalysis(index, outDir);
+        writeSessionCache(ANALYSIS_CACHE, cacheKey, report);
+        setData(report);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to reach Datadog");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [cacheKey, index, outDir],
+  );
 
   useEffect(() => {
-    void load();
+    void load(false);
   }, [load]);
 
   const code = data?.error_code || "";
@@ -51,7 +74,7 @@ export function DatadogAnalysis({ index, outDir, onOpenResponses }: DatadogAnaly
             </p>
           </div>
         </div>
-        <button type="button" className="dd-refresh-btn" onClick={() => void load()} disabled={loading}>
+        <button type="button" className="dd-refresh-btn" onClick={() => void load(true)} disabled={loading}>
           {loading ? <span className="spinner" /> : "↻"} Run report
         </button>
       </div>
@@ -71,7 +94,7 @@ export function DatadogAnalysis({ index, outDir, onOpenResponses }: DatadogAnaly
       {!loading && error && (
         <div className="alert alert-error">
           {error}
-          <button type="button" className="link-button" onClick={() => void load()}>
+          <button type="button" className="link-button" onClick={() => void load(true)}>
             Retry
           </button>
         </div>
