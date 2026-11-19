@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { exportCsvUrl, getDefaults, getFindings, getMetrics, runScan } from "../api/client";
 import type { DefaultConfig, FilterState, FindingRow, TabFilter } from "../types/findings";
 import { classifyFocusedSearchInput } from "../utils/focusedSearch";
+import { clearSessionCache } from "../utils/sessionCache";
 import { FilterDrawer } from "../components/FilterDrawer";
 import { FindingDetail } from "../components/FindingDetail";
 import { FindingsTable } from "../components/FindingsTable";
@@ -210,6 +211,7 @@ export function FindingsPage({ refreshKey, outDir, onScanComplete, onConfigureIn
         error_field: classified.kind === "error_field" ? classified.value : "",
         corora_mappings: config.corora_mappings,
       });
+      clearSessionCache();
       setSuccess(
         result.from_saved
           ? `Loaded ${result.program_count} program(s), ${result.finding_count} finding(s) from saved results. COBOL sources are unchanged.`

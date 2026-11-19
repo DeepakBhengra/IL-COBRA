@@ -5,13 +5,22 @@ import { readSessionCache, writeSessionCache } from "../utils/sessionCache";
 
 const PAYLOAD_CACHE = "datadog-payloads";
 
-function payloadKey(index: number, outDir: string | undefined, host?: string, service?: string): string {
-  return `${index}|${outDir ?? ""}|${host ?? ""}|${service ?? ""}`;
+function payloadKey(
+  index: number,
+  outDir: string | undefined,
+  errorCode: string,
+  errorField: string,
+  host?: string,
+  service?: string,
+): string {
+  return `${index}|${outDir ?? ""}|${errorCode}|${errorField}|${host ?? ""}|${service ?? ""}`;
 }
 
 interface DatadogPayloadsProps {
   index: number;
   outDir?: string;
+  errorCode?: string;
+  errorField?: string;
   host?: string;
   service?: string;
 }
@@ -57,8 +66,15 @@ function ExchangeCard({ item }: { item: DatadogExchange }) {
   );
 }
 
-export function DatadogPayloads({ index, outDir, host, service }: DatadogPayloadsProps) {
-  const cacheKey = payloadKey(index, outDir, host, service);
+export function DatadogPayloads({
+  index,
+  outDir,
+  errorCode = "",
+  errorField = "",
+  host,
+  service,
+}: DatadogPayloadsProps) {
+  const cacheKey = payloadKey(index, outDir, errorCode, errorField, host, service);
   const cached = readSessionCache<DatadogPayloadReport>(PAYLOAD_CACHE, cacheKey);
   const [data, setData] = useState<DatadogPayloadReport | null>(cached ?? null);
   const [loading, setLoading] = useState(!cached);
@@ -75,6 +91,7 @@ export function DatadogPayloads({ index, outDir, host, service }: DatadogPayload
           return;
         }
       }
+      setData(null);
       setLoading(true);
       setError(null);
       try {

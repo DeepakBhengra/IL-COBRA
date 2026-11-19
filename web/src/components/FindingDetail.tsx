@@ -379,6 +379,8 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
                     <OperationalDocsPanel
                       index={index}
                       outDir={outDir}
+                      errorCode={formatValue(row.error_code)}
+                      errorField={formatValue(row.error_field)}
                       onConfigureIngest={onConfigureIngest}
                     />
                   </div>
@@ -391,6 +393,8 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
                     <DatadogAnalysis
                       index={index}
                       outDir={outDir}
+                      errorCode={formatValue(row.error_code)}
+                      errorField={formatValue(row.error_field)}
                       onOpenResponses={(group) => {
                         setPayloadSelection({ host: group.host, service: group.service });
                         openTab("payloads");
@@ -406,6 +410,8 @@ export function FindingDetail({ index, outDir, onClose, onConfigureIngest }: Fin
                     <DatadogPayloads
                       index={index}
                       outDir={outDir}
+                      errorCode={formatValue(row.error_code)}
+                      errorField={formatValue(row.error_field)}
                       host={payloadSelection?.host}
                       service={payloadSelection?.service}
                     />

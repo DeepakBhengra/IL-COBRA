@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { getDefaults, runIngest, runScan } from "../api/client";
+import { clearSessionCache } from "../utils/sessionCache";
 
 import type { DefaultConfig, ScanRequest } from "../types/findings";
 
@@ -151,6 +152,7 @@ export function ScanSettings({ onScanComplete }: ScanSettingsProps) {
     try {
 
       const result = await runScan(form);
+      clearSessionCache();
 
       setMessage({
 

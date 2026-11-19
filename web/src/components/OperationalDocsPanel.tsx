@@ -27,6 +27,8 @@ type OpsCacheEntry = {
 interface OperationalDocsPanelProps {
   index: number;
   outDir?: string;
+  errorCode?: string;
+  errorField?: string;
   onConfigureIngest?: () => void;
 }
 
@@ -240,9 +242,11 @@ function DocumentResolutionSections({ doc, confirmed, onSelect }: DocumentResolu
 export function OperationalDocsPanel({
   index,
   outDir,
+  errorCode = "",
+  errorField = "",
   onConfigureIngest,
 }: OperationalDocsPanelProps) {
-  const cacheKey = `${index}|${outDir ?? ""}`;
+  const cacheKey = `${index}|${outDir ?? ""}|${errorCode}|${errorField}`;
   const cached = readSessionCache<OpsCacheEntry>(OPS_CACHE, cacheKey);
   const [data, setData] = useState<OperationalDocsResponse | null>(cached?.docs ?? null);
   const [status, setStatus] = useState<IngestStatus | null>(cached?.status ?? null);
@@ -276,6 +280,8 @@ export function OperationalDocsPanel({
     }
     setLoading(true);
     setError(null);
+    setData(null);
+    setStatus(null);
     try {
       await refreshDocs();
     } finally {
@@ -324,7 +330,9 @@ export function OperationalDocsPanel({
   const sourceLabel =
     pendingSelection?.source === "historical" ? "Historical Resolution" : "Condition";
 
-  const jiraSection = <JiraInsights index={index} outDir={outDir} />;
+  const jiraSection = (
+    <JiraInsights index={index} outDir={outDir} errorCode={errorCode} errorField={errorField} />
+  );
 
   if (loading) {
     return (

@@ -5,13 +5,15 @@ import { readSessionCache, writeSessionCache } from "../utils/sessionCache";
 
 const ANALYSIS_CACHE = "datadog-analysis";
 
-function analysisKey(index: number, outDir?: string): string {
-  return `${index}|${outDir ?? ""}`;
+function analysisKey(index: number, outDir: string | undefined, errorCode: string, errorField: string): string {
+  return `${index}|${outDir ?? ""}|${errorCode}|${errorField}`;
 }
 
 interface DatadogAnalysisProps {
   index: number;
   outDir?: string;
+  errorCode?: string;
+  errorField?: string;
   onOpenResponses?: (group: DatadogAnalysisGroup) => void;
 }
 
@@ -19,8 +21,14 @@ function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
-export function DatadogAnalysis({ index, outDir, onOpenResponses }: DatadogAnalysisProps) {
-  const cacheKey = analysisKey(index, outDir);
+export function DatadogAnalysis({
+  index,
+  outDir,
+  errorCode = "",
+  errorField = "",
+  onOpenResponses,
+}: DatadogAnalysisProps) {
+  const cacheKey = analysisKey(index, outDir, errorCode, errorField);
   const cached = readSessionCache<DatadogAnalysisReport>(ANALYSIS_CACHE, cacheKey);
   const [data, setData] = useState<DatadogAnalysisReport | null>(cached ?? null);
   const [loading, setLoading] = useState(!cached);
@@ -37,6 +45,7 @@ export function DatadogAnalysis({ index, outDir, onOpenResponses }: DatadogAnaly
           return;
         }
       }
+      setData(null);
       setLoading(true);
       setError(null);
       try {
